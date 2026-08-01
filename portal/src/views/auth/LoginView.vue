@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { loginUser } from '../api/auth'
-
-const emit = defineEmits<{
-  (event: 'authenticated', payload: { user: any; token: string }): void
-}>()
+import { loginUser } from '../../api/auth'
 
 const router = useRouter()
 const email = ref('')
@@ -21,7 +17,6 @@ async function submit() {
     const response = await loginUser({ email: email.value, password: password.value })
     localStorage.setItem('auth_token', response.token)
     localStorage.setItem('auth_user', JSON.stringify(response.user))
-    emit('authenticated', { user: response.user, token: response.token })
     router.push({ name: 'dashboard' })
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Login failed'
@@ -32,44 +27,66 @@ async function submit() {
 </script>
 
 <template>
-  <section class="auth-card">
-    <h1>Login</h1>
-    <p>Sign in to access your dashboard.</p>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <p class="eyebrow">Authentication</p>
+      <h1>Login</h1>
+      <p>Sign in to access your dashboard.</p>
 
-    <form @submit.prevent="submit">
-      <label>
-        Email
-        <input v-model="email" type="email" required />
-      </label>
+      <form @submit.prevent="submit">
+        <label>
+          Email
+          <input v-model="email" type="email" required />
+        </label>
 
-      <label>
-        Password
-        <input v-model="password" type="password" required />
-      </label>
+        <label>
+          Password
+          <input v-model="password" type="password" required />
+        </label>
 
-      <button type="submit" :disabled="loading">
-        {{ loading ? 'Signing in...' : 'Login' }}
-      </button>
-    </form>
+        <button type="submit" :disabled="loading">
+          {{ loading ? 'Signing in...' : 'Login' }}
+        </button>
+      </form>
 
-    <p v-if="error" class="error">{{ error }}</p>
+      <p v-if="error" class="error">{{ error }}</p>
 
-    <p class="switcher">
-      New here?
-      <router-link :to="{ name: 'register' }">Create an account</router-link>
-    </p>
-  </section>
+      <p class="switcher">
+        New here?
+        <router-link :to="{ name: 'auth-register' }">Create an account</router-link>
+      </p>
+      <p class="switcher">
+        <router-link :to="{ name: 'home' }">Back to home</router-link>
+      </p>
+    </section>
+  </main>
 </template>
 
 <style scoped>
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #0f172a, #111827);
+  color: #f8fafc;
+}
+
 .auth-card {
-  max-width: 420px;
-  margin: 0 auto;
+  width: min(100%, 440px);
   padding: 2rem;
   border-radius: 20px;
   background: rgba(15, 23, 42, 0.9);
-  color: #f8fafc;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  font-size: 0.75rem;
+  color: #38bdf8;
 }
 
 form {

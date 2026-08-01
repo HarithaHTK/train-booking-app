@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchCurrentUser, logoutUser, type AuthUser } from '../api/auth'
-
-const emit = defineEmits<{
-  (event: 'logout'): void
-}>()
+import { fetchCurrentUser, logoutUser, type AuthUser } from '../../api/auth'
 
 const router = useRouter()
 const user = ref<AuthUser | null>(null)
@@ -20,7 +16,9 @@ async function loadUser() {
     message.value = 'You are authenticated.'
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Unable to load account'
-    router.push({ name: 'login' })
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_user')
+    router.push({ name: 'auth-login' })
   } finally {
     loading.value = false
   }
@@ -34,8 +32,7 @@ async function handleLogout() {
   } finally {
     localStorage.removeItem('auth_token')
     localStorage.removeItem('auth_user')
-    emit('logout')
-    router.push({ name: 'login' })
+    router.push({ name: 'home' })
   }
 }
 
@@ -45,30 +42,50 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="dashboard-card">
-    <h1>Dashboard</h1>
-    <p v-if="loading">Loading your account...</p>
-    <div v-else>
-      <p class="banner">{{ message }}</p>
-      <p v-if="error" class="error">{{ error }}</p>
-      <div v-if="user" class="profile">
-        <p><strong>Name:</strong> {{ user.name }}</p>
-        <p><strong>Email:</strong> {{ user.email }}</p>
+  <main class="dashboard-shell">
+    <section class="dashboard-card">
+      <p class="eyebrow">Authenticated area</p>
+      <h1>Dashboard</h1>
+      <p v-if="loading">Loading your account...</p>
+      <div v-else>
+        <p class="banner">{{ message }}</p>
+        <p v-if="error" class="error">{{ error }}</p>
+        <div v-if="user" class="profile">
+          <p><strong>Name:</strong> {{ user.name }}</p>
+          <p><strong>Email:</strong> {{ user.email }}</p>
+        </div>
+        <button @click="handleLogout">Logout</button>
       </div>
-      <button @click="handleLogout">Logout</button>
-    </div>
-  </section>
+    </section>
+  </main>
 </template>
 
 <style scoped>
+.dashboard-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #0f172a, #111827);
+  color: #f8fafc;
+}
+
 .dashboard-card {
-  max-width: 520px;
-  margin: 0 auto;
+  width: min(100%, 520px);
   padding: 2rem;
   border-radius: 20px;
   background: rgba(15, 23, 42, 0.9);
   color: #f8fafc;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  font-size: 0.75rem;
+  color: #38bdf8;
 }
 
 .banner {
