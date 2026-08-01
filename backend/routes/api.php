@@ -12,6 +12,7 @@
  * )
  */
 
+use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['allow.cors'])->group(function () {
@@ -22,6 +23,15 @@ Route::middleware(['allow.cors'])->group(function () {
             'timestamp' => now()->toISOString(),
             'service' => 'train-booking-api',
         ]);
+    });
+
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/me', [AuthController::class, 'me']);
+        Route::get('/dashboard', [AuthController::class, 'dashboard']);
     });
 
     // Serve static OpenAPI JSON
