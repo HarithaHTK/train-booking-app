@@ -1,7 +1,5 @@
 <?php
 
-namespace App\Docs;
-
 /**
  * @OA\Info(
  *     title="Train Booking API",
@@ -13,7 +11,3 @@ namespace App\Docs;
  *     description="Local API base path"
  * )
  */
-class OpenApiInfo
-{
-    // This file only contains OpenAPI annotations for swagger-php to consume.
-}
