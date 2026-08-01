@@ -1,0 +1,66 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Train Booking API",
+    "version": "1.0.0",
+    "description": "OpenAPI documentation for the Train Booking backend"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "Local API base path"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "Check if the API is running",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Laravel API is running"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2026-08-01T22:18:56.137996Z"
+                    },
+                    "service": {
+                      "type": "string",
+                      "example": "train-booking-api"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/docs": {
+      "get": {
+        "tags": ["Documentation"],
+        "summary": "Swagger UI",
+        "description": "View API documentation",
+        "responses": {
+          "200": {
+            "description": "Swagger UI HTML"
+          }
+        }
+      }
+    }
+  }
+}

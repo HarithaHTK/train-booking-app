@@ -18,6 +18,16 @@ Health endpoint:
 curl http://127.0.0.1:8000/api/health
 ```
 
+## API Documentation
+
+View Swagger/OpenAPI documentation:
+
+- **Swagger UI**: http://127.0.0.1:8000/api/docs
+- **OpenAPI JSON**: http://127.0.0.1:8000/api/docs/swagger.json
+- **L5-Swagger UI** (alternative): http://127.0.0.1:8000/api/documentation (requires manual generation)
+
+The documentation is generated from `backend/public/docs/swagger.json` and can be updated by editing that file or adding OpenAPI annotations to controllers.
+
 ## Run the frontend
 
 ```bash

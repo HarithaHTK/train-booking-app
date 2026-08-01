@@ -5,7 +5,9 @@ return [
     'documentations' => [
         'default' => [
             'api' => [
-                'title' => 'L5 Swagger UI',
+                'title' => 'Train Booking API',
+                'version' => '1.0.0',
+                'description' => 'OpenAPI documentation for the Train Booking backend',
             ],
 
             'routes' => [
@@ -45,6 +47,7 @@ return [
                  */
                 'annotations' => [
                     base_path('app'),
+                    base_path('routes'),
                 ],
             ],
         ],
