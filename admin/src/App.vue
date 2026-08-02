@@ -4,7 +4,10 @@
       <div class="navbar-content">
         <router-link :to="{ name: 'auth-login' }" class="navbar-title">admin - Train Booking</router-link>
 
-        <ThemeToggle />
+        <div class="navbar-right">
+          <ThemeToggle />
+          <AccountMenu v-if="isAuthenticatedRoute" />
+        </div>
       </div>
     </nav>
     <main class="app-main">
@@ -14,7 +17,14 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import ThemeToggle from './components/ThemeToggle.vue'
+import AccountMenu from './components/AccountMenu.vue'
+
+const route = useRoute()
+
+const isAuthenticatedRoute = computed(() => route.meta.requiresAuth === true)
 </script>
 
 <style scoped>
@@ -52,6 +62,13 @@ import ThemeToggle from './components/ThemeToggle.vue'
   font-weight: 600;
   color: var(--text-primary);
   text-decoration: none;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
 }
 
 .app-main {
