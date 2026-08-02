@@ -42,6 +42,7 @@ onMounted(() => {
             <Message v-if="error" severity="error" class="mb-3">{{ error }}</Message>
             <section class="coming-soon">
               <h2>Dashboard features coming soon</h2>
+              <p>Use the Stations page to manage station records.</p>
             </section>
           </div>
         </div>
@@ -95,9 +96,14 @@ onMounted(() => {
 }
 
 .coming-soon h2 {
-  margin: 0;
+  margin: 0 0 0.5rem;
   font-size: 1.1rem;
   color: var(--text-primary);
+}
+
+.coming-soon p {
+  margin: 0;
+  color: var(--text-secondary);
 }
 
 .error {

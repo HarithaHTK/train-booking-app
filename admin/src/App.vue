@@ -4,6 +4,15 @@
       <div class="navbar-content">
         <router-link :to="{ name: 'auth-login' }" class="navbar-title">admin - Train Booking</router-link>
 
+        <router-link
+          v-if="isAuthenticatedRoute"
+          :to="{ name: 'stations' }"
+          class="navbar-link"
+          :class="{ active: route.name === 'stations' }"
+        >
+          Stations
+        </router-link>
+
         <div class="navbar-right">
           <ThemeToggle />
           <AccountMenu v-if="isAuthenticatedRoute" />
@@ -62,6 +71,21 @@ const isAuthenticatedRoute = computed(() => route.meta.requiresAuth === true)
   font-weight: 600;
   color: var(--text-primary);
   text-decoration: none;
+}
+
+.navbar-link {
+  margin-left: 1rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.navbar-link:hover,
+.navbar-link.active {
+  color: var(--text-primary);
+  background: var(--accent-light);
 }
 
 .navbar-right {

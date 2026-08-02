@@ -171,6 +171,152 @@
           }
         }
       }
+    },
+    "/stations": {
+      "get": {
+        "summary": "List stations",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Stations retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stations": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Station" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a station",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "address"],
+                "properties": {
+                  "name": { "type": "string", "example": "Central Station" },
+                  "address": { "type": "string", "example": "123 Main Street, City" },
+                  "is_active": { "type": "boolean", "example": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Station created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "station": { "$ref": "#/components/schemas/Station" }
+                  }
+                }
+              }
+            }
+          },
+          "422": { "description": "Validation errors" }
+        }
+      }
+    },
+    "/stations/{station}": {
+      "get": {
+        "summary": "Get a station",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "station", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Station retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "station": { "$ref": "#/components/schemas/Station" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a station",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "station", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Central Station" },
+                  "address": { "type": "string", "example": "123 Main Street, City" },
+                  "is_active": { "type": "boolean", "example": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Station updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "station": { "$ref": "#/components/schemas/Station" }
+                  }
+                }
+              }
+            }
+          },
+          "422": { "description": "Validation errors" }
+        }
+      },
+      "delete": {
+        "summary": "Delete a station",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "station", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Station deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Station deleted successfully." }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -188,6 +334,21 @@
           "id": { "type": "integer", "example": 1 },
           "name": { "type": "string", "example": "Jane Doe" },
           "email": { "type": "string", "format": "email", "example": "jane@example.com" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Station": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Central Station" },
+          "address": { "type": "string", "example": "123 Main Street, City" },
+          "is_active": { "type": "boolean", "example": true },
+          "created_by": { "type": "integer", "nullable": true, "example": 1 },
+          "updated_by": { "type": "integer", "nullable": true, "example": 1 },
+          "deleted_by": { "type": "integer", "nullable": true, "example": null },
+          "deleted_at": { "type": "string", "format": "date-time", "nullable": true, "example": null },
           "created_at": { "type": "string", "format": "date-time" },
           "updated_at": { "type": "string", "format": "date-time" }
         }
