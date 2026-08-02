@@ -2,6 +2,7 @@ export type AuthUser = {
   id: number
   name: string
   email: string
+  roles?: string[]
   created_at?: string
   updated_at?: string
 }
@@ -9,6 +10,7 @@ export type AuthUser = {
 type AuthResponse = {
   message: string
   user: AuthUser
+  roles?: string[]
   token: string
 }
 
@@ -52,7 +54,7 @@ export async function logoutUser(): Promise<{ message: string }> {
   })
 }
 
-export async function fetchCurrentUser(): Promise<{ user: AuthUser }> {
+export async function fetchCurrentUser(): Promise<{ user: AuthUser; roles?: string[] }> {
   return request('/me')
 }
 

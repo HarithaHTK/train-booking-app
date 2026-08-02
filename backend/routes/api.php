@@ -31,7 +31,9 @@ Route::middleware(['allow.cors'])->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
-        Route::get('/dashboard', [AuthController::class, 'dashboard']);
+        // Dashboard is admin-only
+        Route::get('/dashboard', [AuthController::class, 'dashboard'])
+            ->middleware(\App\Http\Middleware\RequireRole::class . ':admin');
     });
 
     // Serve static OpenAPI JSON

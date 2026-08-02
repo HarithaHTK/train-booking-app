@@ -25,15 +25,29 @@ const router = createRouter({
   routes,
 })
 
+function hasRole(userJson: string | null, role: string): boolean {
+  if (!userJson) return false
+  try {
+    const parsed = JSON.parse(userJson) as { roles?: string[] }
+    return Array.isArray(parsed.roles) && parsed.roles.includes(role)
+  } catch {
+    return false
+  }
+}
+
 router.beforeEach((to, _, next) => {
   const token = localStorage.getItem('admin_auth_token')
+  const userJson = localStorage.getItem('admin_auth_user')
+  const isAdmin = hasRole(userJson, 'admin')
 
-  if (to.meta.requiresAuth && !token) {
+  if (to.meta.requiresAuth && (!token || !isAdmin)) {
+    localStorage.removeItem('admin_auth_token')
+    localStorage.removeItem('admin_auth_user')
     next({ name: 'auth-login' })
     return
   }
 
-  if (to.name === 'auth-login' && token) {
+  if (to.name === 'auth-login' && token && isAdmin) {
     next({ name: 'dashboard' })
     return
   }
