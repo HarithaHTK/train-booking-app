@@ -36,3 +36,29 @@ npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
 Open http://127.0.0.1:5173 to view the portal.
+
+## Run with Docker Compose
+
+From the repository root:
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+- MySQL database in a separate container
+- Laravel backend on http://localhost:8000
+- Vue/Vite frontend on http://localhost:5173
+
+The frontend proxies `/api` requests to the backend container, so the browser can talk to the API without extra configuration.
+
+Default login after the first startup:
+
+- Email: admin@email.com
+- Password: Password@123
+
+Notes:
+
+- The backend container runs migrations and seeds automatically on startup.
+- If you reset the volumes, the default admin account will be created again on the next `docker compose up`.
