@@ -19,7 +19,7 @@ async function submit() {
   loading.value = true
 
   try {
-    const response = await loginUser({ email: email.value, password: password.value })
+    const response = await loginUser({ email: email.value, password: password.value, app: 'portal' })
     localStorage.setItem('auth_token', response.token)
     localStorage.setItem('auth_user', JSON.stringify(response.user))
     router.push({ name: 'dashboard' })

@@ -20,6 +20,27 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin@email.com'],
             [
                 'name' => 'Admin',
+                'role' => 'admin',
+                'password' => Hash::make('Password@123'),
+                'email_verified_at' => now(),
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'member@email.com'],
+            [
+                'name' => 'Member',
+                'role' => 'member',
+                'password' => Hash::make('Password@123'),
+                'email_verified_at' => now(),
+            ]
+        );
+
+          User::updateOrCreate(
+            ['email' => 'superadmin@email.com'],
+            [
+                'name' => 'Super Admin',
+                'role' => 'super_admin',
                 'password' => Hash::make('Password@123'),
                 'email_verified_at' => now(),
             ]

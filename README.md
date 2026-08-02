@@ -92,7 +92,7 @@ Default login after the first startup:
 - Email: admin@email.com
 - Password: Password@123
 
-Both portal and admin apps can log in with the same credentials. After login, each maintains its own session using isolated storage keys.
+The default seeded account is an admin account and can sign in to the admin app. Member accounts can sign in to the portal app. Super admin accounts can sign in to both apps. Each app maintains its own session using isolated storage keys.
 
 Notes:
 

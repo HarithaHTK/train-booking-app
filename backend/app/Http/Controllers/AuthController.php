@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -45,6 +46,7 @@ class AuthController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'role' => 'member',
         ]);
 
         $token = $user->createToken('train-booking-app')->plainTextToken;
@@ -65,9 +67,10 @@ class AuthController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"email", "password"},
+    *             required={"email", "password", "app"},
      *             @OA\Property(property="email", type="string", format="email", example="jane@example.com"),
-     *             @OA\Property(property="password", type="string", format="password", example="password123")
+    *             @OA\Property(property="password", type="string", format="password", example="password123"),
+    *             @OA\Property(property="app", type="string", enum={"admin", "portal"}, example="admin")
      *         )
      *     ),
      *     @OA\Response(response=200, description="Login successful", @OA\JsonContent(
@@ -83,6 +86,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
+            'app' => ['required', 'string', Rule::in(['admin', 'portal'])],
         ]);
 
         $user = User::where('email', $validated['email'])->first();
@@ -91,6 +95,18 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Invalid credentials.',
             ], 401);
+        }
+
+        $allowedRoles = $validated['app'] === 'admin'
+            ? ['admin', 'super_admin']
+            : ['member', 'super_admin'];
+
+        dd($user->role, $allowedRoles);
+
+        if (! in_array($user->role, $allowedRoles, true)) {
+            return response()->json([
+                'message' => 'This account cannot access the selected application.',
+            ], 403);
         }
 
         $user->tokens()->delete();

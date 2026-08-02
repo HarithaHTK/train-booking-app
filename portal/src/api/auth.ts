@@ -2,8 +2,15 @@ export type AuthUser = {
   id: number
   name: string
   email: string
+  role: 'admin' | 'member' | 'super_admin'
   created_at?: string
   updated_at?: string
+}
+
+type LoginPayload = {
+  email: string
+  password: string
+  app: 'portal'
 }
 
 type AuthResponse = {
@@ -46,7 +53,7 @@ export async function registerUser(payload: { name: string; email: string; passw
   })
 }
 
-export async function loginUser(payload: { email: string; password: string }): Promise<AuthResponse> {
+export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
   return request('/login', {
     method: 'POST',
     body: JSON.stringify(payload),

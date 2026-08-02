@@ -4,6 +4,36 @@ import LoginView from '../views/auth/LoginView.vue'
 import RegisterView from '../views/auth/RegisterView.vue'
 import DashboardView from '../views/main/DashboardView.vue'
 
+const ALLOWED_ROLES = ['member', 'super_admin'] as const
+const TOKEN_KEY = 'auth_token'
+const USER_KEY = 'auth_user'
+
+function getStoredUser(): { role?: string } | null {
+  const rawUser = localStorage.getItem(USER_KEY)
+
+  if (!rawUser) {
+    return null
+  }
+
+  try {
+    return JSON.parse(rawUser) as { role?: string }
+  } catch {
+    return null
+  }
+}
+
+function clearAuthState() {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(USER_KEY)
+}
+
+function hasValidSession() {
+  const token = localStorage.getItem(TOKEN_KEY)
+  const user = getStoredUser()
+
+  return Boolean(token && user?.role && ALLOWED_ROLES.includes(user.role as typeof ALLOWED_ROLES[number]))
+}
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -34,14 +64,18 @@ const router = createRouter({
 })
 
 router.beforeEach((to, _, next) => {
-  const token = localStorage.getItem('auth_token')
+  const hasSession = hasValidSession()
 
-  if (to.meta.requiresAuth && !token) {
+  if (!hasSession && localStorage.getItem(TOKEN_KEY)) {
+    clearAuthState()
+  }
+
+  if (to.meta.requiresAuth && !hasSession) {
     next({ name: 'auth-login' })
     return
   }
 
-  if ((to.name === 'auth-login' || to.name === 'auth-register') && token) {
+  if ((to.name === 'auth-login' || to.name === 'auth-register') && hasSession) {
     next({ name: 'dashboard' })
     return
   }
