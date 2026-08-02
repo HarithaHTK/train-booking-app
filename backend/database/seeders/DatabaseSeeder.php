@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Spatie\Permission\Models\Role;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -17,10 +17,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $roleTable = config('permission.table_names.roles', 'roles');
+        $modelHasRolesTable = config('permission.table_names.model_has_roles', 'model_has_roles');
+        $guardName = config('auth.defaults.guard', 'web');
+
         // Create roles (idempotent)
         $roles = ['admin', 'member', 'guest'];
         foreach ($roles as $r) {
-            Role::firstOrCreate(['name' => $r]);
+            DB::table($roleTable)->updateOrInsert(
+                ['name' => $r, 'guard_name' => $guardName],
+                ['updated_at' => now(), 'created_at' => now()]
+            );
         }
 
         // Ensure admin user exists and has admin role
@@ -32,7 +39,7 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
-        $admin->assignRole('admin');
+        $this->attachRole($admin->id, 'admin', $roleTable, $modelHasRolesTable, $guardName);
 
         // Ensure member user exists and has member role
         $member = User::updateOrCreate(
@@ -43,7 +50,7 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
-        $member->assignRole('member');
+        $this->attachRole($member->id, 'member', $roleTable, $modelHasRolesTable, $guardName);
 
         // Ensure super admin exists and has both admin + member roles
         $superAdmin = User::updateOrCreate(
@@ -54,6 +61,28 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
-        $superAdmin->syncRoles(['admin', 'member']);
+        $this->attachRole($superAdmin->id, 'admin', $roleTable, $modelHasRolesTable, $guardName);
+        $this->attachRole($superAdmin->id, 'member', $roleTable, $modelHasRolesTable, $guardName);
+    }
+
+    private function attachRole(int $userId, string $roleName, string $roleTable, string $modelHasRolesTable, string $guardName): void
+    {
+        $roleId = DB::table($roleTable)
+            ->where('name', $roleName)
+            ->where('guard_name', $guardName)
+            ->value('id');
+
+        if (! $roleId) {
+            return;
+        }
+
+        DB::table($modelHasRolesTable)->updateOrInsert(
+            [
+                'role_id' => $roleId,
+                'model_type' => User::class,
+                'model_id' => $userId,
+            ],
+            []
+        );
     }
 }
