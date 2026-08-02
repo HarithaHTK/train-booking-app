@@ -1,3 +1,5 @@
+import { adminRequest } from './http'
+
 export type AuthUser = {
   id: number
   name: string
@@ -14,50 +16,23 @@ type AuthResponse = {
   token: string
 }
 
-async function request(path: string, init: RequestInit = {}): Promise<any> {
-  const token = localStorage.getItem('admin_auth_token')
-  const headers = new Headers(init.headers || {})
-
-  headers.set('Accept', 'application/json')
-  if (!headers.has('Content-Type') && !(init.body instanceof FormData)) {
-    headers.set('Content-Type', 'application/json')
-  }
-
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`)
-  }
-
-  const response = await fetch(`/api${path}`, {
-    ...init,
-    headers,
-  })
-
-  const data = await response.json().catch(() => ({}))
-
-  if (!response.ok) {
-    throw new Error(data.message || 'Request failed')
-  }
-
-  return data
-}
-
 export async function loginUser(payload: { email: string; password: string }): Promise<AuthResponse> {
-  return request('/login', {
+  return adminRequest<AuthResponse>('/login', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
 }
 
 export async function logoutUser(): Promise<{ message: string }> {
-  return request('/logout', {
+  return adminRequest<{ message: string }>('/logout', {
     method: 'POST',
   })
 }
 
 export async function fetchCurrentUser(): Promise<{ user: AuthUser; roles?: string[] }> {
-  return request('/me')
+  return adminRequest<{ user: AuthUser; roles?: string[] }>('/me')
 }
 
 export async function fetchDashboard(): Promise<{ message: string; user: AuthUser }> {
-  return request('/dashboard')
+  return adminRequest<{ message: string; user: AuthUser }>('/dashboard')
 }

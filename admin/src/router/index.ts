@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import LoginView from '../views/auth/LoginView.vue'
 import DashboardView from '../views/main/DashboardView.vue'
+import StationsView from '../views/main/StationsView.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -16,6 +17,12 @@ const routes: RouteRecordRaw[] = [
     path: '/dashboard',
     name: 'dashboard',
     component: DashboardView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/stations',
+    name: 'stations',
+    component: StationsView,
     meta: { requiresAuth: true },
   },
 ]
