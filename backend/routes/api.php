@@ -13,6 +13,7 @@
  */
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\StationController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['allow.cors'])->group(function () {
@@ -34,6 +35,9 @@ Route::middleware(['allow.cors'])->group(function () {
         // Dashboard is admin-only
         Route::get('/dashboard', [AuthController::class, 'dashboard'])
             ->middleware(\App\Http\Middleware\RequireRole::class . ':admin');
+
+        Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
+            ->apiResource('stations', StationController::class);
     });
 
     // Serve static OpenAPI JSON
