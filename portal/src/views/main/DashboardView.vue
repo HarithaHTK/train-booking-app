@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import Button from 'primevue/button'
+import Card from 'primevue/card'
+import Message from 'primevue/message'
 import { fetchCurrentUser, logoutUser, type AuthUser } from '../../api/auth'
 
 const router = useRouter()
@@ -43,20 +46,24 @@ onMounted(() => {
 
 <template>
   <main class="dashboard-shell">
-    <section class="dashboard-card">
-      <p class="eyebrow">Authenticated area</p>
-      <h1>Dashboard</h1>
-      <p v-if="loading">Loading your account...</p>
-      <div v-else>
-        <p class="banner">{{ message }}</p>
-        <p v-if="error" class="error">{{ error }}</p>
-        <div v-if="user" class="profile">
-          <p><strong>Name:</strong> {{ user.name }}</p>
-          <p><strong>Email:</strong> {{ user.email }}</p>
+    <Card class="dashboard-card shadow-sm">
+      <template #title>
+        <p class="eyebrow">Authenticated area</p>
+        <h1 class="h2 mb-3">Dashboard</h1>
+      </template>
+      <template #content>
+        <p v-if="loading" class="text-light-emphasis">Loading your account...</p>
+        <div v-else>
+          <Message severity="success" class="mb-3">{{ message }}</Message>
+          <Message v-if="error" severity="error" class="mb-3">{{ error }}</Message>
+          <div v-if="user" class="profile">
+            <p><strong>Name:</strong> {{ user.name }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+          </div>
+          <Button severity="secondary" @click="handleLogout">Logout</Button>
         </div>
-        <button @click="handleLogout">Logout</button>
-      </div>
-    </section>
+      </template>
+    </Card>
   </main>
 </template>
 
@@ -66,18 +73,20 @@ onMounted(() => {
   display: grid;
   place-items: center;
   padding: 2rem;
-  background: linear-gradient(135deg, #0f172a, #111827);
-  color: #f8fafc;
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dashboard-card {
   width: min(100%, 520px);
-  padding: 2rem;
+  padding: 0.5rem;
   border-radius: 20px;
-  background: rgba(15, 23, 42, 0.9);
-  color: #f8fafc;
+  background: var(--panel-bg);
+  color: var(--text-primary);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .eyebrow {
@@ -85,30 +94,28 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.28em;
   font-size: 0.75rem;
-  color: #38bdf8;
+  color: var(--accent-primary);
+  transition: color 0.3s ease;
 }
 
 .banner {
-  color: #86efac;
+  color: var(--accent-primary);
 }
 
 .profile {
   margin: 1rem 0 1.5rem;
   padding: 1rem;
   border-radius: 16px;
-  background: rgba(56, 189, 248, 0.12);
+  background: var(--accent-light);
+  border: 1px solid var(--border-light);
+  transition: background-color 0.3s ease;
 }
 
-button {
-  padding: 0.8rem 1rem;
-  border: 0;
-  border-radius: 999px;
-  background: #fb7185;
-  color: white;
-  cursor: pointer;
+.profile p {
+  color: var(--text-primary);
 }
 
 .error {
-  color: #fecaca;
+  color: var(--accent-primary);
 }
 </style>

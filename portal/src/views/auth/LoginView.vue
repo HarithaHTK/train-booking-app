@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import Button from 'primevue/button'
+import Card from 'primevue/card'
+import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
+import Password from 'primevue/password'
 import { loginUser } from '../../api/auth'
 
 const router = useRouter()
@@ -28,37 +33,41 @@ async function submit() {
 
 <template>
   <main class="auth-shell">
-    <section class="auth-card">
-      <p class="eyebrow">Authentication</p>
-      <h1>Login</h1>
-      <p>Sign in to access your dashboard.</p>
+    <Card class="auth-card shadow-sm">
+      <template #title>
+        <p class="eyebrow">Authentication</p>
+        <h1 class="h2 mb-3">Login</h1>
+      </template>
+      <template #content>
+        <p class="supporting-text mb-4">Sign in to access your dashboard.</p>
 
-      <form @submit.prevent="submit">
-        <label>
-          Email
-          <input v-model="email" type="email" required />
-        </label>
+        <form @submit.prevent="submit" class="d-grid gap-3">
+          <label class="d-grid gap-2 text-start">
+            <span class="fw-semibold">Email</span>
+            <InputText v-model="email" type="email" required class="w-100" />
+          </label>
 
-        <label>
-          Password
-          <input v-model="password" type="password" required />
-        </label>
+          <label class="d-grid gap-2 text-start">
+            <span class="fw-semibold">Password</span>
+            <Password v-model="password" :feedback="false" toggleMask required class="w-100" />
+          </label>
 
-        <button type="submit" :disabled="loading">
-          {{ loading ? 'Signing in...' : 'Login' }}
-        </button>
-      </form>
+          <Button type="submit" :loading="loading" class="w-100 mt-2">
+            {{ loading ? 'Signing in...' : 'Login' }}
+          </Button>
+        </form>
 
-      <p v-if="error" class="error">{{ error }}</p>
+        <Message v-if="error" severity="error" class="mt-3 w-100">{{ error }}</Message>
 
-      <p class="switcher">
-        New here?
-        <router-link :to="{ name: 'auth-register' }">Create an account</router-link>
-      </p>
-      <p class="switcher">
-        <router-link :to="{ name: 'home' }">Back to home</router-link>
-      </p>
-    </section>
+        <p class="switcher mt-4">
+          New here?
+          <router-link :to="{ name: 'auth-register' }">Create an account</router-link>
+        </p>
+        <p class="switcher">
+          <router-link :to="{ name: 'home' }">Back to home</router-link>
+        </p>
+      </template>
+    </Card>
   </main>
 </template>
 
@@ -68,17 +77,19 @@ async function submit() {
   display: grid;
   place-items: center;
   padding: 2rem;
-  background: linear-gradient(135deg, #0f172a, #111827);
-  color: #f8fafc;
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .auth-card {
   width: min(100%, 440px);
-  padding: 2rem;
+  padding: 0.5rem;
   border-radius: 20px;
-  background: rgba(15, 23, 42, 0.9);
+  background: var(--panel-bg);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .eyebrow {
@@ -86,7 +97,8 @@ async function submit() {
   text-transform: uppercase;
   letter-spacing: 0.28em;
   font-size: 0.75rem;
-  color: #38bdf8;
+  color: var(--accent-primary);
+  transition: color 0.3s ease;
 }
 
 form {
@@ -100,22 +112,15 @@ label {
   font-size: 0.95rem;
 }
 
-input {
+:deep(.p-inputtext),
+:deep(.p-password-input) {
+  width: 100%;
+  border-radius: 0.75rem;
   padding: 0.8rem 0.95rem;
-  border-radius: 12px;
-  border: 1px solid #475569;
-  background: #0f172a;
-  color: #f8fafc;
 }
 
-button {
-  padding: 0.85rem 1rem;
-  border: 0;
-  border-radius: 999px;
-  background: #38bdf8;
-  color: #082f49;
-  font-weight: 700;
-  cursor: pointer;
+:deep(.p-password) {
+  display: block;
 }
 
 .error {
@@ -125,10 +130,16 @@ button {
 
 .switcher {
   margin-top: 1rem;
-  color: #cbd5e1;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
 .switcher a {
-  color: #38bdf8;
+  color: var(--accent-primary);
+  transition: color 0.3s ease;
+}
+
+.switcher a:hover {
+  color: var(--accent-hover);
 }
 </style>
