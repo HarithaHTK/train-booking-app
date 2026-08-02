@@ -4,16 +4,19 @@
       <div class="navbar-content">
         <router-link :to="{ name: 'home' }" class="navbar-title">Train Booking</router-link>
 
-        <div v-if="showAuthActions" class="navbar-actions">
-          <router-link :to="{ name: 'auth-login' }" class="nav-link-wrap">
-            <Button label="Login" severity="secondary" text />
-          </router-link>
-          <router-link :to="{ name: 'auth-register' }" class="nav-link-wrap">
-            <Button label="Register" />
-          </router-link>
+        <div class="navbar-right">
+          <div v-if="showAuthActions" class="navbar-actions">
+            <router-link :to="{ name: 'auth-login' }" class="nav-link-wrap">
+              <Button label="Login" severity="secondary" text />
+            </router-link>
+            <router-link :to="{ name: 'auth-register' }" class="nav-link-wrap">
+              <Button label="Register" />
+            </router-link>
+          </div>
+          
+          <ThemeToggle />
+          <AccountMenu v-if="!showAuthActions" />
         </div>
-
-        <ThemeToggle />
       </div>
     </nav>
     <main class="app-main">
@@ -27,6 +30,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import Button from 'primevue/button'
 import ThemeToggle from './components/ThemeToggle.vue'
+import AccountMenu from './components/AccountMenu.vue'
 
 const route = useRoute()
 
@@ -74,11 +78,17 @@ const showAuthActions = computed(() => route.meta.requiresAuth !== true)
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-left: auto;
 }
 
 .nav-link-wrap {
   text-decoration: none;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
 }
 
 .app-main {
@@ -98,9 +108,11 @@ const showAuthActions = computed(() => route.meta.requiresAuth !== true)
   }
 
   .navbar-actions {
-    width: 100%;
-    margin-left: 0;
-    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .navbar-right {
+    gap: 0.75rem;
     flex-wrap: wrap;
   }
 
