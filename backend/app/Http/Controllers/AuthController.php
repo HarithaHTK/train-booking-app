@@ -99,6 +99,7 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Login successful.',
             'user' => $user,
+            'roles' => $user->getRoleNames(),
             'token' => $token,
         ]);
     }
@@ -140,8 +141,10 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
+        $user = $request->user();
         return response()->json([
-            'user' => $request->user(),
+            'user' => $user,
+            'roles' => $user ? $user->getRoleNames() : [],
         ]);
     }
 

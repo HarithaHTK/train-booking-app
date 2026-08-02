@@ -20,8 +20,18 @@ async function submit() {
 
   try {
     const response = await loginUser({ email: email.value, password: password.value })
+    const roleNames = response.roles ?? response.user.roles ?? []
+
+    if (!roleNames.includes('admin')) {
+      localStorage.removeItem('admin_auth_token')
+      localStorage.removeItem('admin_auth_user')
+      error.value = 'Access denied. Admin role is required.'
+      return
+    }
+
+    const userWithRoles = { ...response.user, roles: roleNames }
     localStorage.setItem('admin_auth_token', response.token)
-    localStorage.setItem('admin_auth_user', JSON.stringify(response.user))
+    localStorage.setItem('admin_auth_user', JSON.stringify(userWithRoles))
     router.push({ name: 'dashboard' })
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Login failed'

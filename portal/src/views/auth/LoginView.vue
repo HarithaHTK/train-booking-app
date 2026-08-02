@@ -20,8 +20,18 @@ async function submit() {
 
   try {
     const response = await loginUser({ email: email.value, password: password.value })
+    const roleNames = response.roles ?? response.user.roles ?? []
+
+    if (!roleNames.includes('member')) {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('auth_user')
+      error.value = 'Access denied. Member role is required.'
+      return
+    }
+
+    const userWithRoles = { ...response.user, roles: roleNames }
     localStorage.setItem('auth_token', response.token)
-    localStorage.setItem('auth_user', JSON.stringify(response.user))
+    localStorage.setItem('auth_user', JSON.stringify(userWithRoles))
     router.push({ name: 'dashboard' })
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Login failed'

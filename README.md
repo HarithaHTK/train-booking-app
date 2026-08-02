@@ -87,14 +87,27 @@ This starts:
 
 All frontends proxy `/api` requests to the backend, and both can authenticate independently using the same server and token-based auth system.
 
-Default login after the first startup:
+Default seeded users after the first startup:
 
-- Email: admin@email.com
-- Password: Password@123
+- Admin app only:
+	- Email: admin@email.com
+	- Password: Password@123
+	- Role: admin
+- Portal app only:
+	- Email: member@email.com
+	- Password: Password@123
+	- Role: member
+- Both apps (super admin):
+	- Email: superadmin@email.com
+	- Password: Password@123
+	- Roles: admin, member
 
-Both portal and admin apps can log in with the same credentials. After login, each maintains its own session using isolated storage keys.
+Role-based access is enforced in both frontends:
+- `admin` role can access the admin app
+- `member` role can access the portal app
+- users without the required role are blocked at login and route guard level
 
 Notes:
 
 - The backend container runs migrations and seeds automatically on startup.
-- If you reset the volumes, the default admin account will be created again on the next `docker compose up`.
+- If you reset the volumes, these default seeded accounts will be created again on the next `docker compose up`.
