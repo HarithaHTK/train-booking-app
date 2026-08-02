@@ -47,7 +47,18 @@ docker compose up --build
 
 This starts:
 
+- MySQL database in a separate container
 - Laravel backend on http://localhost:8000
 - Vue/Vite frontend on http://localhost:5173
 
 The frontend proxies `/api` requests to the backend container, so the browser can talk to the API without extra configuration.
+
+Default login after the first startup:
+
+- Email: admin@email.com
+- Password: Password@123
+
+Notes:
+
+- The backend container runs migrations and seeds automatically on startup.
+- If you reset the volumes, the default admin account will be created again on the next `docker compose up`.
