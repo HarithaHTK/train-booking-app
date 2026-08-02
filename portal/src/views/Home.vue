@@ -7,9 +7,11 @@
       </div>
 
       <nav class="actions" aria-label="Authentication actions">
-        <router-link :to="{ name: 'auth-login' }" class="ghost-button link-button">Login</router-link>
-        <router-link :to="{ name: 'auth-register' }" class="primary-button link-button">
-          Register
+        <router-link :to="{ name: 'auth-login' }" class="ghost-button link-button text-decoration-none">
+          <Button label="Login" severity="secondary" text />
+        </router-link>
+        <router-link :to="{ name: 'auth-register' }" class="primary-button link-button text-decoration-none">
+          <Button label="Register" />
         </router-link>
       </nav>
     </header>
@@ -40,6 +42,10 @@
     </section>
   </main>
 </template>
+
+<script setup lang="ts">
+import Button from 'primevue/button'
+</script>
 
 <style scoped>
 .home-shell {

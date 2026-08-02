@@ -8,6 +8,11 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --portal-bg: #020617;
+  --portal-panel: rgba(15, 23, 42, 0.9);
+  --portal-border: rgba(148, 163, 184, 0.2);
+  --portal-accent: #38bdf8;
+  --portal-accent-2: #fb7185;
 }
 
 * {
@@ -23,6 +28,8 @@ body,
 
 body {
   min-height: 100vh;
+  background: var(--portal-bg);
+  color: #f8fafc;
 }
 
 h1,
@@ -264,4 +271,39 @@ code {
     right: 0;
     border-right-color: var(--border);
   }
+}
+
+.p-card,
+.p-inputtext,
+.p-password-input,
+.p-button,
+.p-message {
+  font-family: inherit;
+}
+
+.p-card {
+  background: var(--portal-panel);
+  border: 1px solid var(--portal-border);
+  color: #f8fafc;
+}
+
+.p-inputtext,
+.p-password-input {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+.p-inputtext:focus,
+.p-password-input:focus {
+  border-color: var(--portal-accent);
+  box-shadow: 0 0 0 0.2rem rgba(56, 189, 248, 0.25);
+}
+
+.p-button {
+  border-radius: 999px;
+}
+
+.p-message {
+  border-radius: 0.75rem;
 }
