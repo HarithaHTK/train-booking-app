@@ -39,7 +39,7 @@ async function submit() {
         <h1 class="h2 mb-3">Login</h1>
       </template>
       <template #content>
-        <p class="text-light-emphasis mb-4">Sign in to access your dashboard.</p>
+        <p class="supporting-text mb-4">Sign in to access your dashboard.</p>
 
         <form @submit.prevent="submit" class="d-grid gap-3">
           <label class="d-grid gap-2 text-start">
@@ -77,17 +77,19 @@ async function submit() {
   display: grid;
   place-items: center;
   padding: 2rem;
-  background: linear-gradient(135deg, #0f172a, #111827);
-  color: #f8fafc;
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .auth-card {
   width: min(100%, 440px);
   padding: 0.5rem;
   border-radius: 20px;
-  background: rgba(15, 23, 42, 0.9);
+  background: var(--panel-bg);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .eyebrow {
@@ -95,7 +97,8 @@ async function submit() {
   text-transform: uppercase;
   letter-spacing: 0.28em;
   font-size: 0.75rem;
-  color: #38bdf8;
+  color: var(--accent-primary);
+  transition: color 0.3s ease;
 }
 
 form {
@@ -127,10 +130,16 @@ label {
 
 .switcher {
   margin-top: 1rem;
-  color: #cbd5e1;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
 .switcher a {
-  color: #38bdf8;
+  color: var(--accent-primary);
+  transition: color 0.3s ease;
+}
+
+.switcher a:hover {
+  color: var(--accent-hover);
 }
 </style>
