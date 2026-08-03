@@ -63,6 +63,10 @@ class DatabaseSeeder extends Seeder
         );
         $this->attachRole($superAdmin->id, 'admin', $roleTable, $modelHasRolesTable, $guardName);
         $this->attachRole($superAdmin->id, 'member', $roleTable, $modelHasRolesTable, $guardName);
+
+        // Seed stations and routes
+        $this->call(StationSeeder::class);
+        $this->call(TrainRouteSeeder::class);
     }
 
     private function attachRole(int $userId, string $roleName, string $roleTable, string $modelHasRolesTable, string $guardName): void
