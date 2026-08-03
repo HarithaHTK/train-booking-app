@@ -67,6 +67,11 @@ class DatabaseSeeder extends Seeder
         // Seed stations and routes
         $this->call(StationSeeder::class);
         $this->call(TrainRouteSeeder::class);
+
+        // Seed train assets
+        $this->call(EngineSeeder::class);
+        $this->call(CoachSeeder::class);
+        $this->call(SeatSeeder::class);
     }
 
     private function attachRole(int $userId, string $roleName, string $roleTable, string $modelHasRolesTable, string $guardName): void

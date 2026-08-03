@@ -13,8 +13,14 @@
  */
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CoachController;
+use App\Http\Controllers\EngineController;
 use App\Http\Controllers\RouteStationController;
 use App\Http\Controllers\StationController;
+use App\Http\Controllers\SeatController;
+use App\Http\Controllers\TrainCoachController;
+use App\Http\Controllers\TrainController;
+use App\Http\Controllers\TrainEngineController;
 use App\Http\Controllers\TrainRouteController;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +46,24 @@ Route::middleware(['allow.cors'])->group(function () {
 
         Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
             ->apiResource('routes', TrainRouteController::class);
+
+        Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
+            ->apiResource('trains', TrainController::class);
+
+        Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
+            ->apiResource('engines', EngineController::class);
+
+        Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
+            ->apiResource('coaches', CoachController::class);
+
+        Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
+            ->apiResource('seats', SeatController::class);
+
+        Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
+            ->apiResource('train-engines', TrainEngineController::class);
+
+        Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
+            ->apiResource('train-coaches', TrainCoachController::class);
 
         Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
             ->apiResource('route-stations', RouteStationController::class);

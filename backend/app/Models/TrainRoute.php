@@ -86,4 +86,9 @@ class TrainRoute extends Model
     {
         return $this->routeStations()->orderBy('sequence', $direction);
     }
+
+    public function trains(): HasMany
+    {
+        return $this->hasMany(Train::class, 'route_id');
+    }
 }
