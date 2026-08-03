@@ -45,8 +45,7 @@ const form = ref<TrainPayload>({
   train_name: '',
   is_active: true,
   engine_ids: [],
-  reserved_coach_ids: [],
-  unreserved_coach_ids: [],
+  coach_ids: [],
 })
 
 function formatDateTime(value?: string) {
@@ -90,8 +89,7 @@ function resetForm() {
     train_name: '',
     is_active: true,
     engine_ids: [],
-    reserved_coach_ids: [],
-    unreserved_coach_ids: [],
+    coach_ids: [],
   }
   editingId.value = null
 }
@@ -110,8 +108,7 @@ async function openEdit(train: Train) {
       train_name: t.train_name || '',
       is_active: t.is_active ?? true,
       engine_ids: (t.engines || []).map((e: any) => e.id),
-      reserved_coach_ids: (t.coaches || []).filter(c => c.type === 'reserved').map(c => c.id),
-      unreserved_coach_ids: (t.coaches || []).filter(c => c.type !== 'reserved').map(c => c.id),
+      coach_ids: (t.coaches || []).map(c => c.id),
     }
     editingId.value = t.id
     dialogVisible.value = true

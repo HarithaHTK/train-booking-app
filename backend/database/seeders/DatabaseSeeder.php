@@ -72,6 +72,9 @@ class DatabaseSeeder extends Seeder
         $this->call(EngineSeeder::class);
         $this->call(CoachSeeder::class);
         $this->call(SeatSeeder::class);
+
+        // Seed demo trains for the admin table view
+        $this->call(TrainSeeder::class);
     }
 
     private function attachRole(int $userId, string $roleName, string $roleTable, string $modelHasRolesTable, string $guardName): void
