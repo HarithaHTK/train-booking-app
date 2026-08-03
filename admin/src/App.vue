@@ -13,6 +13,15 @@
           Stations
         </router-link>
 
+        <router-link
+          v-if="isAuthenticatedRoute"
+          :to="{ name: 'routes' }"
+          class="navbar-link"
+          :class="{ active: route.name === 'routes' }"
+        >
+          Routes
+        </router-link>
+
         <div class="navbar-right">
           <ThemeToggle />
           <AccountMenu v-if="isAuthenticatedRoute" />
