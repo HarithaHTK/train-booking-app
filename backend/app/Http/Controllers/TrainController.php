@@ -24,7 +24,7 @@ class TrainController extends Controller
         $validated = $request->validate([
             'train_number' => ['required', 'string', 'max:255', 'unique:trains,train_number'],
             'train_name' => ['required', 'string', 'max:255'],
-            'route_id' => ['required', 'integer', 'exists:routes,id'],
+            'route_id' => ['sometimes', 'nullable', 'integer', 'exists:routes,id'],
             'is_active' => ['sometimes', 'boolean'],
             'engine_ids' => ['sometimes', 'array'],
             'engine_ids.*' => ['integer', 'exists:engines,id'],
@@ -37,7 +37,7 @@ class TrainController extends Controller
         $train = Train::create([
             'train_number' => $validated['train_number'],
             'train_name' => $validated['train_name'],
-            'route_id' => $validated['route_id'],
+            'route_id' => $validated['route_id'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
             'created_by' => $userId,
             'updated_by' => $userId,
@@ -62,7 +62,7 @@ class TrainController extends Controller
         $validated = $request->validate([
             'train_number' => ['sometimes', 'string', 'max:255', Rule::unique('trains', 'train_number')->ignore($train->id)],
             'train_name' => ['sometimes', 'string', 'max:255'],
-            'route_id' => ['sometimes', 'integer', 'exists:routes,id'],
+            'route_id' => ['sometimes', 'nullable', 'integer', 'exists:routes,id'],
             'is_active' => ['sometimes', 'boolean'],
             'engine_ids' => ['sometimes', 'array'],
             'engine_ids.*' => ['integer', 'exists:engines,id'],
@@ -72,7 +72,7 @@ class TrainController extends Controller
 
         $userId = $request->user()?->id;
 
-        $train->fill($validated);
+        $train->fill(collect($validated)->only(['train_number', 'train_name', 'route_id', 'is_active'])->all());
         $train->updated_by = $userId;
         $train->save();
 
@@ -115,7 +115,14 @@ class TrainController extends Controller
 
     private function loadTrain(Train $train): Train
     {
-        return $train->load(['route', 'engines', 'coaches', 'trainEngines.engine', 'trainCoaches.coach']);
+        return $train->load([
+            'route',
+            'engines',
+            'coaches',
+            'trainEngines.engine',
+            'trainCoaches.coach',
+            'coaches.seats',
+        ]);
     }
 
     private function syncEngines(Train $train, array $engineIds, ?int $userId): void

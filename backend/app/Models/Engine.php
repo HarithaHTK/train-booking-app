@@ -23,6 +23,8 @@ class Engine extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected $appends = ['name'];
+
     protected function casts(): array
     {
         return [
@@ -38,6 +40,11 @@ class Engine extends Model
         return $this->belongsToMany(Train::class, 'train_engines')
             ->withPivot('position')
             ->orderBy('position');
+    }
+
+    public function getNameAttribute(): string
+    {
+        return trim(($this->engine_type ?? '') . ' ' . ($this->engine_number ?? ''));
     }
 
     public function createdBy(): BelongsTo

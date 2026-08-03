@@ -3,6 +3,7 @@ import LoginView from '../views/auth/LoginView.vue'
 import DashboardView from '../views/main/DashboardView.vue'
 import StationsView from '../views/main/StationsView.vue'
 import RoutesView from '../views/main/RoutesView.vue'
+import TrainsView from '../views/main/TrainsView.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -30,6 +31,12 @@ const routes: RouteRecordRaw[] = [
     path: '/routes',
     name: 'routes',
     component: RoutesView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/trains',
+    name: 'trains',
+    component: TrainsView,
     meta: { requiresAuth: true },
   },
 ]

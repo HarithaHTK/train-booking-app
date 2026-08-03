@@ -22,6 +22,8 @@ class Coach extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected $appends = ['name', 'seat_count', 'type'];
+
     protected function casts(): array
     {
         return [
@@ -57,5 +59,20 @@ class Coach extends Model
     public function deletedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deleted_by');
+    }
+
+    public function getNameAttribute(): string
+    {
+        return (string) ($this->coach_number ?? '');
+    }
+
+    public function getSeatCountAttribute(): ?int
+    {
+        return $this->total_seats !== null ? (int) $this->total_seats : null;
+    }
+
+    public function getTypeAttribute(): ?string
+    {
+        return $this->coach_type ?? null;
     }
 }
