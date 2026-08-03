@@ -13,7 +13,9 @@
  */
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\RouteStationController;
 use App\Http\Controllers\StationController;
+use App\Http\Controllers\TrainRouteController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['allow.cors'])->group(function () {
@@ -37,12 +39,23 @@ Route::middleware(['allow.cors'])->group(function () {
             ->middleware(\App\Http\Middleware\RequireRole::class . ':admin');
 
         Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
+            ->apiResource('routes', TrainRouteController::class);
+
+        Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
+            ->apiResource('route-stations', RouteStationController::class);
+
+        Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
             ->apiResource('stations', StationController::class);
     });
 
-    // Serve static OpenAPI JSON
+    // Serve the static OpenAPI JSON, with the generated file as a fallback if needed
     Route::get('/docs/swagger.json', function () {
         $path = public_path('docs/swagger.json');
+
+        if (! file_exists($path)) {
+            $path = storage_path('api-docs/api-docs.json');
+        }
+
         if (! file_exists($path)) {
             return response()->json(['error' => 'API docs not found'], 404);
         }
