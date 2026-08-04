@@ -131,6 +131,8 @@ function getTotalSeats() {
 }
 
 function getSeatsForCoach(coach: ScheduleCoach): CoachSeat[] {
+  if (!journeyDate.value) return []
+
   const seatCount = coach.seat_count ?? coach.total_seats ?? 0
   const seats = Array.isArray((coach as ScheduleCoach & { seats?: CoachSeat[] }).seats)
     ? ((coach as ScheduleCoach & { seats?: CoachSeat[] }).seats ?? [])
@@ -142,7 +144,7 @@ function getSeatsForCoach(coach: ScheduleCoach): CoachSeat[] {
         id: Number(seat.id ?? index + 1),
         seatNumber: Number.isFinite(Number(seat.seat_number)) ? Number(seat.seat_number) : index + 1,
         label: `S${Number.isFinite(Number(seat.seat_number)) ? Number(seat.seat_number) : index + 1}`,
-          isReserved: seat.is_reserved === true,
+        isReserved: seat.is_reserved === true || (seat as { isReserved?: boolean }).isReserved === true,
       }))
       .slice(0, seatCount || seats.length)
   }
@@ -151,28 +153,12 @@ function getSeatsForCoach(coach: ScheduleCoach): CoachSeat[] {
     id: index + 1,
     seatNumber: index + 1,
     label: `S${index + 1}`,
-    isReserved: isSeatReservedForSelectedJourney(coach.id, index + 1, index + 1),
+    isReserved: false,
   }))
 }
 
 function isReservedCoach(coach: ScheduleCoach) {
   return String(coach.type ?? '').toLowerCase() === 'reserved'
-}
-
-function isSeatReservedForSelectedJourney(coachId: number, seatId: number, seatNumber: number) {
-  return journeyReservations.value.some((reservation) =>
-    reservation.isReserved === true
-    && (
-      reservation.seat_id === seatId
-      || reservation.seat?.id === seatId
-    )
-    && (
-      reservation.seat?.coach_id === coachId
-      || Number(reservation.seat?.coach_id) === coachId
-      || reservation.seat?.seat_number === seatNumber
-      || Number(reservation.seat?.seat_number) === seatNumber
-    ),
-  )
 }
 
 function getSeatKey(coach: ScheduleCoach, seat: CoachSeat) {
@@ -258,6 +244,12 @@ async function confirmBooking() {
   if (!selectedSeats.length) {
     bookingDialogVisible.value = false
     error.value = 'Please select one or more seats to book.'
+    return
+  }
+
+  if (!journeyDate.value) {
+    bookingDialogVisible.value = false
+    error.value = 'Please select a travel date before booking.'
     return
   }
 
@@ -420,9 +412,17 @@ async function loadSchedule() {
     return
   }
 
+  if (!journeyDate.value) {
+    schedule.value = null
+    error.value = 'Please select a travel date to load coach seats.'
+    return
+  }
+
   scheduleLoading.value = true
   try {
-    const response = await fetchSchedule(scheduleId.value)
+    const response = await fetchSchedule(scheduleId.value, {
+      travel_date: formatDateQuery(journeyDate.value),
+    })
     schedule.value = response.schedule
     activeCoachIndex.value = 0
   } catch (err) {
@@ -469,6 +469,7 @@ watch([journeyStartStation, journeyEndStation, journeyDate, journeyTime], () => 
 
 watch(journeyDate, async () => {
   if (!journeyReady.value) return
+  await loadSchedule()
   await loadJourneyReservations()
 })
 

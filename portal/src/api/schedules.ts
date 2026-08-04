@@ -14,6 +14,10 @@ export type ScheduleCoach = {
   }>
 }
 
+export type ScheduleQuery = {
+  travel_date?: string | null
+}
+
 export type ScheduleTrain = {
   id: number
   train_number: string
@@ -110,8 +114,15 @@ async function request(path: string, init: RequestInit = {}): Promise<any> {
   return data
 }
 
-export async function fetchSchedule(scheduleId: number): Promise<ScheduleResponse> {
-  return request(`/schedules/${scheduleId}`)
+export async function fetchSchedule(scheduleId: number, query: ScheduleQuery = {}): Promise<ScheduleResponse> {
+  const params = new URLSearchParams()
+
+  if (query.travel_date) {
+    params.set('travel_date', query.travel_date)
+  }
+
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  return request(`/schedules/${scheduleId}${suffix}`)
 }
 
 export async function createReservation(payload: ReservationPayload): Promise<ReservationResponse> {

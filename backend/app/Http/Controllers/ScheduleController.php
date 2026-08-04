@@ -33,6 +33,8 @@ class ScheduleController extends Controller
      */
     public function index(): JsonResponse
     {
+        $travelDate = request()->input('travel_date');
+
         $schedules = Schedule::query()
             ->latest()
             ->with([
@@ -41,7 +43,11 @@ class ScheduleController extends Controller
                 'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
             ])
             ->get()
-            ->map(fn (Schedule $schedule) => $this->formatSchedule($schedule))
+            ->map(function (Schedule $schedule) use ($travelDate) {
+                $this->applySeatReservationAvailability($schedule, $travelDate);
+
+                return $this->formatSchedule($schedule);
+            })
             ->values();
 
         return response()->json([
@@ -63,6 +69,8 @@ class ScheduleController extends Controller
      */
     public function searchRoutesByStation(Station $station): JsonResponse
     {
+        $travelDate = request()->input('travel_date');
+
         $routes = TrainRoute::query()
             ->where('is_active', true)
             ->with([
@@ -118,7 +126,11 @@ class ScheduleController extends Controller
             ])
             ->latest()
             ->get()
-            ->map(fn (Schedule $schedule) => $this->formatSchedule($schedule))
+            ->map(function (Schedule $schedule) use ($travelDate) {
+                $this->applySeatReservationAvailability($schedule, $travelDate);
+
+                return $this->formatSchedule($schedule);
+            })
             ->values();
 
         return response()->json([
@@ -416,11 +428,14 @@ class ScheduleController extends Controller
 
         foreach ($schedule->train?->coaches ?? [] as $coach) {
             foreach ($coach->seats ?? [] as $seat) {
-                $seat->setAttribute('isReserved', $availabilityEngine->isReserved(
+                $isReserved = $availabilityEngine->isReserved(
                     (int) $schedule->id,
                     (int) $seat->id,
                     $travelDate,
-                ));
+                );
+
+                $seat->setAttribute('isReserved', $isReserved);
+                $seat->setAttribute('is_reserved', $isReserved);
             }
         }
     }

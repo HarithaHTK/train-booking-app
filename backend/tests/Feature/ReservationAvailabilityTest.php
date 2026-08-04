@@ -10,6 +10,7 @@ use App\Models\Seat;
 use App\Models\Station;
 use App\Models\Train;
 use App\Models\TrainRoute;
+use App\Models\TrainRoute as RouteModel;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -73,6 +74,27 @@ class ReservationAvailabilityTest extends TestCase
         $this->getJson('/api/reservations?schedule_id='.$schedule->id.'&travel_date=2026-08-04')
             ->assertOk()
             ->assertJsonPath('reservations.0.isReserved', true);
+    }
+
+    public function test_schedule_seat_reserved_flag_respects_travel_date(): void
+    {
+        $user = $this->makeMemberUser();
+        Sanctum::actingAs($user);
+
+        $schedule = $this->makeSchedule();
+        $seat = $this->makeSeat();
+        $stations = $this->makeStationsForSchedule($schedule);
+
+        $this->postJson('/api/reservations', $this->payload($schedule->id, $seat->id, $stations['start']->id, $stations['end']->id, '2026-08-04'))
+            ->assertCreated();
+
+        $this->getJson('/api/schedules/'.$schedule->id.'?travel_date=2026-08-04')
+            ->assertOk()
+            ->assertJsonPath('schedule.train.coaches.0.seats.0.isReserved', true);
+
+        $this->getJson('/api/schedules/'.$schedule->id.'?travel_date=2026-08-05')
+            ->assertOk()
+            ->assertJsonPath('schedule.train.coaches.0.seats.0.isReserved', false);
     }
 
     private function payload(int $scheduleId, int $seatId, int $startStationId, int $leaveStationId, string $travelDate): array
