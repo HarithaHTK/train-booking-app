@@ -159,9 +159,20 @@ function getTotalSeats(schedule: JourneySchedule) {
 }
 
 function openReservation(schedule: JourneySchedule) {
+  const selectedDate = journeyDate.value
+  const selectedTime = journeyTime.value
+
   router.push({
     name: 'reservation-detail',
     params: { scheduleId: String(schedule.id) },
+    query: {
+      from: journeyFrom.value ? String(journeyFrom.value) : undefined,
+      to: journeyTo.value ? String(journeyTo.value) : undefined,
+      date: selectedDate ? selectedDate.toISOString().slice(0, 10) : undefined,
+      time: selectedTime
+        ? `${String(selectedTime.getHours()).padStart(2, '0')}:${String(selectedTime.getMinutes()).padStart(2, '0')}`
+        : undefined,
+    },
   })
 }
 

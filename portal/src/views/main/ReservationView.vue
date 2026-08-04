@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import Dropdown from 'primevue/dropdown'
+import Calendar from 'primevue/calendar'
 import Card from 'primevue/card'
 import Message from 'primevue/message'
 import Button from 'primevue/button'
 import { fetchCurrentUser, type AuthUser } from '../../api/auth'
 import { fetchSchedule, type Schedule, type ScheduleCoach } from '../../api/schedules'
+import { fetchStations, type Station } from '../../api/stations'
 
 const route = useRoute()
 const router = useRouter()
@@ -17,8 +20,58 @@ const schedule = ref<Schedule | null>(null)
 const scheduleLoading = ref(false)
 const activeCoachIndex = ref(0)
 const coachStrip = ref<HTMLElement | null>(null)
+const stations = ref<Station[]>([])
+const stationsLoading = ref(false)
+const journeyStartStation = ref<number | null>(null)
+const journeyEndStation = ref<number | null>(null)
+const journeyDate = ref<Date | null>(null)
+const journeyTime = ref<Date | null>(null)
+const journeyReady = ref(false)
 
 const scheduleId = computed(() => Number(route.params.scheduleId))
+const journeyQueryFrom = computed(() => Number(route.query.from))
+const journeyQueryTo = computed(() => Number(route.query.to))
+
+function parseDateQuery(value: unknown) {
+  if (typeof value !== 'string' || !value) return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function parseTimeQuery(value: unknown) {
+  if (typeof value !== 'string' || !value) return null
+
+  const [hours, minutes, seconds = '0'] = value.split(':')
+  const hour = Number(hours)
+  const minute = Number(minutes)
+  const second = Number(seconds)
+
+  if ([hour, minute, second].some((part) => Number.isNaN(part))) return null
+
+  const time = new Date()
+  time.setHours(hour, minute, second, 0)
+  return time
+}
+
+function formatDateQuery(value: Date | null) {
+  return value ? value.toISOString().slice(0, 10) : undefined
+}
+
+function formatTimeQuery(value: Date | null) {
+  if (!value) return undefined
+  return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`
+}
+
+function routeStationOptions() {
+  return (schedule.value?.route?.stations ?? [])
+    .slice()
+    .sort((a, b) => a.sequence - b.sequence)
+    .map((stationItem) => stationItem.station)
+    .filter((station): station is Station => Boolean(station))
+}
+
+const startStationOptions = computed(() => routeStationOptions().filter((station) => station.id !== journeyEndStation.value))
+const endStationOptions = computed(() => routeStationOptions().filter((station) => station.id !== journeyStartStation.value))
 
 type CoachSeat = {
   seatNumber: number
@@ -144,6 +197,38 @@ function getStationTiming(stationId: number) {
   return schedule.value?.station_schedules?.find((stationSchedule) => stationSchedule.station_id === stationId) ?? null
 }
 
+function syncJourneyFromQuery() {
+  const from = journeyQueryFrom.value
+  const to = journeyQueryTo.value
+  const date = parseDateQuery(route.query.date)
+  const time = parseTimeQuery(route.query.time)
+
+  if (!Number.isFinite(from) || !Number.isFinite(to) || !date || !time) {
+    router.replace({ name: 'dashboard' })
+    return false
+  }
+
+  journeyStartStation.value = from
+  journeyEndStation.value = to
+  journeyDate.value = date
+  journeyTime.value = time
+  journeyReady.value = true
+  return true
+}
+
+function syncQueryFromJourney() {
+  router.replace({
+    name: 'reservation-detail',
+    params: { scheduleId: String(scheduleId.value) },
+    query: {
+      from: journeyStartStation.value ? String(journeyStartStation.value) : undefined,
+      to: journeyEndStation.value ? String(journeyEndStation.value) : undefined,
+      date: formatDateQuery(journeyDate.value),
+      time: formatTimeQuery(journeyTime.value),
+    },
+  })
+}
+
 async function loadUser() {
   try {
     const response = await fetchCurrentUser()
@@ -181,9 +266,29 @@ async function loadSchedule() {
   }
 }
 
+async function loadStations() {
+  stationsLoading.value = true
+  try {
+    const response = await fetchStations()
+    stations.value = response.stations
+  } catch {
+    stations.value = []
+  } finally {
+    stationsLoading.value = false
+  }
+}
+
+watch([journeyStartStation, journeyEndStation, journeyDate, journeyTime], () => {
+  if (!journeyReady.value) return
+  syncQueryFromJourney()
+})
+
 onMounted(() => {
+  if (!syncJourneyFromQuery()) return
+
   loadUser()
   loadSchedule()
+  loadStations()
 })
 </script>
 
@@ -207,6 +312,41 @@ onMounted(() => {
               </div>
               <p v-if="scheduleLoading" class="reservation-copy">Loading schedule information...</p>
               <template v-else-if="schedule">
+                <section class="summary-grid">
+                  <article class="summary-card">
+                    <span class="summary-label">Journey start</span>
+                    <Dropdown
+                      v-model="journeyStartStation"
+                      :options="startStationOptions"
+                      optionLabel="name"
+                      optionValue="id"
+                      placeholder="Select start station"
+                      class="w-100"
+                      :loading="stationsLoading"
+                    />
+                  </article>
+                  <article class="summary-card">
+                    <span class="summary-label">Journey end</span>
+                    <Dropdown
+                      v-model="journeyEndStation"
+                      :options="endStationOptions"
+                      optionLabel="name"
+                      optionValue="id"
+                      placeholder="Select end station"
+                      class="w-100"
+                      :loading="stationsLoading"
+                    />
+                  </article>
+                  <article class="summary-card">
+                    <span class="summary-label">Journey date</span>
+                    <Calendar v-model="journeyDate" dateFormat="yy-mm-dd" class="w-100" showIcon />
+                  </article>
+                  <article class="summary-card">
+                    <span class="summary-label">Journey time</span>
+                    <Calendar v-model="journeyTime" timeOnly hourFormat="24" class="w-100" showIcon />
+                  </article>
+                </section>
+
                 <section class="summary-grid">
                   <article class="summary-card">
                     <span class="summary-label">Route</span>
