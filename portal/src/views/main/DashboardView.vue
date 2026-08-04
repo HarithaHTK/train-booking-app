@@ -9,6 +9,57 @@ import Calendar from 'primevue/calendar'
 import { fetchCurrentUser, type AuthUser } from '../../api/auth'
 import { fetchStations, type Station } from '../../api/stations'
 
+type JourneyRouteStation = {
+  id: number
+  route_id: number
+  station_id: number
+  sequence: number
+  station?: Station
+}
+
+type JourneyRoute = {
+  id: number
+  name: string
+  description?: string
+  is_active: boolean
+  matched_station_id?: number
+  matched_sequence?: number | null
+  forward_stations?: JourneyRouteStation[]
+  stations?: JourneyRouteStation[]
+}
+
+type JourneySchedule = {
+  id: number
+  route_id: number
+  train_id: number
+  departure_time?: string | null
+  is_active: boolean
+  route?: {
+    id: number
+    name: string
+  }
+  train?: {
+    id: number
+    train_number: string
+    train_name: string
+    coaches?: Array<{
+      id: number
+      name?: string
+      type?: string | null
+      seat_count?: number | null
+      total_seats?: number | null
+    }>
+  }
+  station_schedules?: Array<{
+    id: number
+    station_id: number
+    sequence: number
+    arrival_time?: string | null
+    departure_time?: string | null
+    station?: Station
+  }>
+}
+
 const router = useRouter()
 const user = ref<AuthUser | null>(null)
 const message = ref('')
@@ -21,6 +72,25 @@ const journeyDate = ref<Date | null>(null)
 const journeyTime = ref<Date | null>(null)
 const stationsLoading = ref(false)
 const stationError = ref('')
+const journeyLoading = ref(false)
+const journeyRoutes = ref<JourneyRoute[]>([])
+const journeySchedules = ref<JourneySchedule[]>([])
+
+function getCoachRows(schedule: JourneySchedule) {
+  return schedule.train?.coaches ?? []
+}
+
+function getTotalCoaches(schedule: JourneySchedule) {
+  return getCoachRows(schedule).length
+}
+
+function getReservableCoaches(schedule: JourneySchedule) {
+  return getCoachRows(schedule).filter((coach) => coach.type === 'reserved').length
+}
+
+function getTotalSeats(schedule: JourneySchedule) {
+  return getCoachRows(schedule).reduce((sum, coach) => sum + (coach.seat_count ?? coach.total_seats ?? 0), 0)
+}
 
 const fromOptions = computed(() => stations.value.filter((station) => station.id !== journeyTo.value))
 const toOptions = computed(() => stations.value.filter((station) => station.id !== journeyFrom.value))
@@ -28,9 +98,12 @@ const toOptions = computed(() => stations.value.filter((station) => station.id !
 async function loadUser() {
   try {
     const response = await fetchCurrentUser()
-    user.value = response.user
-    message.value = `Welcome, ${response.user.name}!`
-    localStorage.setItem('auth_user', JSON.stringify(response.user))
+    const roleNames = response.roles ?? response.user.roles ?? []
+    const userWithRoles = { ...response.user, roles: roleNames }
+
+    user.value = userWithRoles
+    message.value = `Welcome, ${userWithRoles.name}!`
+    localStorage.setItem('auth_user', JSON.stringify(userWithRoles))
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Unable to load account'
     const cachedUser = localStorage.getItem('auth_user')
@@ -72,6 +145,36 @@ async function loadStations() {
 
 function startJourney() {
   if (!journeyFrom.value || !journeyTo.value || !journeyDate.value || !journeyTime.value) return
+
+  journeyLoading.value = true
+  journeyRoutes.value = []
+  journeySchedules.value = []
+  stationError.value = ''
+  message.value = ''
+  error.value = ''
+
+  fetch(`/api/route-search/by-station/${journeyFrom.value}`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${localStorage.getItem('auth_token') ?? ''}`,
+    },
+  })
+    .then(async (response) => {
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Unable to load matching routes')
+      }
+
+      journeyRoutes.value = data.routes ?? []
+      journeySchedules.value = data.schedules ?? []
+    })
+    .catch((err) => {
+      stationError.value = err instanceof Error ? err.message : 'Unable to load matching routes'
+    })
+    .finally(() => {
+      journeyLoading.value = false
+    })
 }
 
 
@@ -157,6 +260,36 @@ onMounted(() => {
                 class="journey-action"
                 @click="startJourney"
               />
+
+              <p v-if="journeyLoading" class="journey-status">Loading matching routes and schedules...</p>
+
+              <div v-if="journeyRoutes.length || journeySchedules.length" class="journey-results">
+                <section v-if="journeyRoutes.length" class="journey-results-block">
+                  <h3>Matching routes</h3>
+                  <ul>
+                    <li v-for="route in journeyRoutes" :key="route.id">
+                      <strong>{{ route.name }}</strong>
+                      <span v-if="route.description"> — {{ route.description }}</span>
+                    </li>
+                  </ul>
+                </section>
+
+                <section v-if="journeySchedules.length" class="journey-results-block">
+                  <h3>Matching schedules</h3>
+                  <ul>
+                    <li v-for="schedule in journeySchedules" :key="schedule.id">
+                      <strong>{{ schedule.train?.train_name ?? 'Train' }}</strong>
+                      <span v-if="schedule.train?.train_number"> ({{ schedule.train.train_number }})</span>
+                      <span v-if="schedule.departure_time"> — departs {{ schedule.departure_time }}</span>
+                      <div class="journey-train-summary">
+                        <span>Total coaches: {{ getTotalCoaches(schedule) }}</span>
+                        <span>Reservable coaches: {{ getReservableCoaches(schedule) }}</span>
+                        <span>Total seats: {{ getTotalSeats(schedule) }}</span>
+                      </div>
+                    </li>
+                  </ul>
+                </section>
+              </div>
             </section>
           </div>
         </div>
@@ -236,6 +369,43 @@ onMounted(() => {
 
 .journey-action {
   margin-top: 1.25rem;
+}
+
+.journey-status {
+  margin: 1rem 0 0;
+  color: var(--text-secondary);
+}
+
+.journey-results {
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.journey-results-block {
+  padding: 1rem;
+  border-radius: 14px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-light);
+}
+
+.journey-results-block h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.journey-results-block ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.journey-train-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin-top: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
 }
 
 .error {

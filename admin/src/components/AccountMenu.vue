@@ -61,7 +61,7 @@ async function logout() {
     console.error('Logout error:', err)
   } finally {
     localStorage.removeItem('admin_auth_token')
-    localStorage.removeItem('admin_user')
+      localStorage.removeItem('admin_auth_user')
     router.push({ name: 'auth-login' })
   }
 }

@@ -104,6 +104,50 @@ class ScheduleCrudTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_admin_can_search_routes_and_schedules_by_station_direction(): void
+    {
+        $admin = $this->makeAdminUser();
+        Sanctum::actingAs($admin);
+
+        $central = Station::factory()->create(['name' => 'Central Station']);
+        $north = Station::factory()->create(['name' => 'North Terminal']);
+        $airport = Station::factory()->create(['name' => 'Airport Station']);
+
+        $route = TrainRoute::factory()->create([
+            'name' => 'Northbound Line',
+            'is_active' => true,
+        ]);
+
+        \App\Models\RouteStation::factory()->create([
+            'route_id' => $route->id,
+            'station_id' => $central->id,
+            'sequence' => 1,
+        ]);
+        \App\Models\RouteStation::factory()->create([
+            'route_id' => $route->id,
+            'station_id' => $north->id,
+            'sequence' => 2,
+        ]);
+        \App\Models\RouteStation::factory()->create([
+            'route_id' => $route->id,
+            'station_id' => $airport->id,
+            'sequence' => 3,
+        ]);
+
+        $schedule = Schedule::factory()->create([
+            'route_id' => $route->id,
+        ]);
+
+        $response = $this->getJson('/api/route-search/by-station/'.$central->id);
+
+        $response->assertOk()
+            ->assertJsonPath('station.id', $central->id)
+            ->assertJsonCount(1, 'routes')
+            ->assertJsonCount(1, 'schedules')
+            ->assertJsonPath('routes.0.id', $route->id)
+            ->assertJsonPath('schedules.0.id', $schedule->id);
+    }
+
     private function makeAdminUser(): User
     {
         $this->ensureRole('admin');

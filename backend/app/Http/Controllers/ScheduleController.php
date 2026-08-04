@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Schedule\StoreScheduleRequest;
 use App\Http\Requests\Schedule\UpdateScheduleRequest;
 use App\Http\Requests\Schedule\UpdateScheduleStationRequest;
+use App\Models\RouteStation;
 use App\Models\Schedule;
 use App\Models\ScheduleStation;
+use App\Models\Station;
+use App\Models\TrainRoute;
 use Illuminate\Http\Request as BaseRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,6 +43,85 @@ class ScheduleController extends Controller
             ->values();
 
         return response()->json([
+            'schedules' => $schedules,
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/route-search/by-station/{station}",
+     *     tags={"Schedules"},
+     *     summary="Find routes and schedules by station direction",
+     *     operationId="searchRoutesByStation",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(name="station", in="path", required=true, description="Station ID", @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Matching routes and schedules retrieved successfully"),
+     *     @OA\Response(response=404, description="Station not found")
+     * )
+     */
+    public function searchRoutesByStation(Station $station): JsonResponse
+    {
+        $routes = TrainRoute::query()
+            ->where('is_active', true)
+            ->with([
+                'routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
+                'schedules' => fn ($query) => $query->with([
+                    'train',
+                    'stationSchedules' => fn ($stationQuery) => $stationQuery->with('station')->orderBy('sequence', 'asc'),
+                ])->orderBy('created_at', 'desc'),
+            ])
+            ->get()
+            ->filter(function ($route) use ($station) {
+                $matchedIndex = $route->routeStations->search(fn (RouteStation $routeStation) => $routeStation->station_id === $station->id);
+
+                return $matchedIndex !== false && $matchedIndex < $route->routeStations->count() - 1;
+            })
+            ->map(function ($route) use ($station) {
+                $routeStations = $route->routeStations->values();
+                $matchedIndex = $routeStations->search(fn (RouteStation $routeStation) => $routeStation->station_id === $station->id);
+
+                return [
+                    'id' => $route->id,
+                    'name' => $route->name,
+                    'description' => $route->description,
+                    'is_active' => $route->is_active,
+                    'stations' => $routeStations->map(fn (RouteStation $routeStation) => [
+                        'id' => $routeStation->id,
+                        'route_id' => $routeStation->route_id,
+                        'station_id' => $routeStation->station_id,
+                        'sequence' => $routeStation->sequence,
+                        'station' => $routeStation->station?->toArray(),
+                    ])->values()->all(),
+                    'matched_station_id' => $station->id,
+                    'matched_sequence' => $routeStations[$matchedIndex]->sequence ?? null,
+                    'forward_stations' => $routeStations->slice($matchedIndex + 1)->map(fn (RouteStation $routeStation) => [
+                        'id' => $routeStation->id,
+                        'route_id' => $routeStation->route_id,
+                        'station_id' => $routeStation->station_id,
+                        'sequence' => $routeStation->sequence,
+                        'station' => $routeStation->station?->toArray(),
+                    ])->values()->all(),
+                ];
+            })
+            ->values();
+
+        $matchedRouteIds = $routes->pluck('id')->all();
+
+        $schedules = Schedule::query()
+            ->whereIn('route_id', $matchedRouteIds)
+            ->with([
+                'train.coaches',
+                'route.routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
+                'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
+            ])
+            ->latest()
+            ->get()
+            ->map(fn (Schedule $schedule) => $this->formatSchedule($schedule))
+            ->values();
+
+        return response()->json([
+            'station' => $station,
+            'routes' => $routes,
             'schedules' => $schedules,
         ]);
     }

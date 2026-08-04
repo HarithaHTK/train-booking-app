@@ -28,8 +28,11 @@ async function submit() {
       password_confirmation: passwordConfirmation.value,
     })
 
+    const roleNames = response.roles ?? response.user.roles ?? ['member']
+    const userWithRoles = { ...response.user, roles: roleNames }
+
     localStorage.setItem('auth_token', response.token)
-    localStorage.setItem('auth_user', JSON.stringify(response.user))
+    localStorage.setItem('auth_user', JSON.stringify(userWithRoles))
     router.push({ name: 'dashboard' })
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Registration failed'

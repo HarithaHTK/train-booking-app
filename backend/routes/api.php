@@ -47,6 +47,8 @@ Route::middleware(['allow.cors'])->group(function () {
         Route::get('/dashboard', [AuthController::class, 'dashboard'])
             ->middleware(\App\Http\Middleware\RequireRole::class . ':admin');
 
+        Route::get('route-search/by-station/{station}', [ScheduleController::class, 'searchRoutesByStation']);
+
         Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
             ->apiResource('routes', TrainRouteController::class);
 
