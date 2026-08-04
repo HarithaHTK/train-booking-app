@@ -70,6 +70,8 @@ Route::middleware(['allow.cors'])->group(function () {
             ->apiResource('route-stations', RouteStationController::class);
 
         Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')->group(function () {
+            Route::get('schedules', [ScheduleController::class, 'index']);
+            Route::post('schedules', [ScheduleController::class, 'store']);
             Route::get('schedules/{schedule}', [ScheduleController::class, 'show']);
             Route::put('schedules/{schedule}', [ScheduleController::class, 'update']);
             Route::patch('schedules/{schedule}/stations/{schedule_station}', [ScheduleController::class, 'updateStation']);

@@ -31,6 +31,15 @@
           Trains
         </router-link>
 
+        <router-link
+          v-if="isAuthenticatedRoute"
+          :to="{ name: 'schedules' }"
+          class="navbar-link"
+          :class="{ active: route.name === 'schedules' }"
+        >
+          Schedules
+        </router-link>
+
         <div class="navbar-right">
           <ThemeToggle />
           <AccountMenu v-if="isAuthenticatedRoute" />
