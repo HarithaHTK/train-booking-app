@@ -37,7 +37,15 @@ const journeyQueryTo = computed(() => Number(route.query.to))
 
 function parseDateQuery(value: unknown) {
   if (typeof value !== 'string' || !value) return null
-  const parsed = new Date(value)
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+
+  const year = Number(match[1])
+  const month = Number(match[2]) - 1
+  const day = Number(match[3])
+  const parsed = new Date(year, month, day)
+
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
@@ -57,7 +65,17 @@ function parseTimeQuery(value: unknown) {
 }
 
 function formatDateQuery(value: Date | null) {
-  return value ? value.toISOString().slice(0, 10) : undefined
+  if (!value) return undefined
+
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function formatDateOnly(value: Date | null) {
+  return formatDateQuery(value) ?? 'N/A'
 }
 
 function formatTimeQuery(value: Date | null) {
@@ -122,7 +140,7 @@ function getSeatsForCoach(coach: ScheduleCoach): CoachSeat[] {
         id: Number(seat.id ?? index + 1),
         seatNumber: Number.isFinite(Number(seat.seat_number)) ? Number(seat.seat_number) : index + 1,
         label: `S${Number.isFinite(Number(seat.seat_number)) ? Number(seat.seat_number) : index + 1}`,
-        isReserved: Boolean(seat.is_reserved),
+          isReserved: seat.is_reserved === true,
       }))
       .slice(0, seatCount || seats.length)
   }
@@ -201,7 +219,7 @@ function getSelectedReservationRows() {
     departureTime: schedule.value?.departure_time ?? 'N/A',
     journeyStart: getJourneyStationName(journeyStartStation.value),
     journeyEnd: getJourneyStationName(journeyEndStation.value),
-    journeyDate: journeyDate.value ? journeyDate.value.toISOString().slice(0, 10) : 'N/A',
+    journeyDate: formatDateOnly(journeyDate.value),
     journeyTime: journeyTime.value ? `${String(journeyTime.value.getHours()).padStart(2, '0')}:${String(journeyTime.value.getMinutes()).padStart(2, '0')}` : 'N/A',
     status: 'pending',
   }))
@@ -627,7 +645,7 @@ onMounted(() => {
             <article class="booking-detail-card">
               <span class="summary-label">Journey</span>
               <p>{{ getJourneyStationName(journeyStartStation) }} → {{ getJourneyStationName(journeyEndStation) }}</p>
-              <p>{{ journeyDate ? journeyDate.toISOString().slice(0, 10) : 'N/A' }} · {{ journeyTime ? `${String(journeyTime.getHours()).padStart(2, '0')}:${String(journeyTime.getMinutes()).padStart(2, '0')}` : 'N/A' }}</p>
+              <p>{{ formatDateOnly(journeyDate) }} · {{ journeyTime ? `${String(journeyTime.getHours()).padStart(2, '0')}:${String(journeyTime.getMinutes()).padStart(2, '0')}` : 'N/A' }}</p>
             </article>
           </div>
         </section>

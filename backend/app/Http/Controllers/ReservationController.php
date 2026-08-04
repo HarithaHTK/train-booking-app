@@ -33,6 +33,10 @@ class ReservationController extends Controller
             $query->where('user_id', $request->user()?->id);
         }
 
+        if ($request->boolean('trashed')) {
+            $query->onlyTrashed();
+        }
+
         if ($request->filled('user_id')) {
             $query->where('user_id', $request->integer('user_id'));
         }
@@ -137,13 +141,7 @@ class ReservationController extends Controller
         $reservation->save();
 
         if (($validated['status'] ?? null) === 'cancelled' && $previousStatus !== 'cancelled') {
-            $seat = Seat::query()->whereKey($reservation->seat_id)->first();
-
-            if ($seat) {
-                $seat->is_reserved = false;
-                $seat->updated_by = $request->user()?->id;
-                $seat->save();
-            }
+            $this->syncSeatReservationState($reservation->seat_id, $request->user()?->id);
         }
 
         return response()->json([
@@ -156,20 +154,34 @@ class ReservationController extends Controller
     {
         $this->authorizeReservation($request, $reservation);
 
-        $seat = Seat::query()->whereKey($reservation->seat_id)->first();
-        if ($seat) {
-            $seat->is_reserved = false;
-            $seat->updated_by = $request->user()?->id;
-            $seat->save();
-        }
-
         $reservation->deleted_by = $request->user()?->id;
         $reservation->save();
         $reservation->delete();
 
+        $this->syncSeatReservationState($reservation->seat_id, $request->user()?->id);
+
         return response()->json([
             'message' => 'Reservation deleted successfully.',
         ]);
+    }
+
+    private function syncSeatReservationState(int $seatId, ?int $userId = null): void
+    {
+        $seat = Seat::query()->whereKey($seatId)->first();
+
+        if (! $seat) {
+            return;
+        }
+
+        $isReserved = Reservation::query()
+            ->where('seat_id', $seatId)
+            ->whereNull('deleted_at')
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->exists();
+
+        $seat->is_reserved = $isReserved;
+        $seat->updated_by = $userId;
+        $seat->save();
     }
 
     private function loadReservation(Reservation $reservation): Reservation

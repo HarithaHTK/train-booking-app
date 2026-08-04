@@ -90,6 +90,16 @@ function toDateTime(value: Date | string | null | undefined) {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
+function formatDateOnly(value: Date | null) {
+  if (!value) return undefined
+
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
 function getSelectedDateTime() {
   const date = toDateTime(journeyDate.value)
   const time = toDateTime(journeyTime.value)
@@ -168,7 +178,7 @@ function openReservation(schedule: JourneySchedule) {
     query: {
       from: journeyFrom.value ? String(journeyFrom.value) : undefined,
       to: journeyTo.value ? String(journeyTo.value) : undefined,
-      date: selectedDate ? selectedDate.toISOString().slice(0, 10) : undefined,
+      date: formatDateOnly(selectedDate),
       time: selectedTime
         ? `${String(selectedTime.getHours()).padStart(2, '0')}:${String(selectedTime.getMinutes()).padStart(2, '0')}`
         : undefined,
