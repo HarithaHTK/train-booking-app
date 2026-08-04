@@ -4,6 +4,7 @@ import LoginView from '../views/auth/LoginView.vue'
 import RegisterView from '../views/auth/RegisterView.vue'
 import DashboardView from '../views/main/DashboardView.vue'
 import ReservationView from '../views/main/ReservationView.vue'
+import MyReservationsView from '../views/main/MyReservationsView.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -25,6 +26,12 @@ const routes: RouteRecordRaw[] = [
     path: '/dashboard',
     name: 'dashboard',
     component: DashboardView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/dashboard/my-reservations',
+    name: 'my-reservations',
+    component: MyReservationsView,
     meta: { requiresAuth: true },
   },
   {
