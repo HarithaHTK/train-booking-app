@@ -48,8 +48,8 @@ class ScheduleStation extends Model
     {
         return [
             'sequence' => 'integer',
-            'arrival_time' => 'datetime:H:i:s',
-            'departure_time' => 'datetime:H:i:s',
+            'arrival_time' => 'string',
+            'departure_time' => 'string',
             'deleted_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',

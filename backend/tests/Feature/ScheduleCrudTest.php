@@ -36,7 +36,71 @@ class ScheduleCrudTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('schedule.train_id', $train->id)
             ->assertJsonPath('schedule.route_id', $route->id)
-            ->assertJsonPath('schedule.is_active', false);
+            ->assertJsonPath('schedule.is_active', false)
+            ->assertJsonPath('schedule.departure_time', '20:00:00');
+    }
+
+    public function test_admin_can_create_daily_schedule_with_time_only_departure(): void
+    {
+        $admin = $this->makeAdminUser();
+        Sanctum::actingAs($admin);
+
+        $train = Train::factory()->create();
+        $route = TrainRoute::factory()->create();
+
+        $response = $this->postJson('/api/schedules', [
+            'train_id' => $train->id,
+            'route_id' => $route->id,
+            'departure_time' => '06:30:00',
+            'is_active' => true,
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('schedule.train_id', $train->id)
+            ->assertJsonPath('schedule.route_id', $route->id)
+            ->assertJsonPath('schedule.departure_time', '06:30:00')
+            ->assertJsonPath('schedule.is_active', true);
+    }
+
+    public function test_admin_rejects_datetime_departure_time(): void
+    {
+        $admin = $this->makeAdminUser();
+        Sanctum::actingAs($admin);
+
+        $train = Train::factory()->create();
+        $route = TrainRoute::factory()->create();
+
+        $this->postJson('/api/schedules', [
+            'train_id' => $train->id,
+            'route_id' => $route->id,
+            'departure_time' => '2026-08-04 06:30:00',
+            'is_active' => true,
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['departure_time']);
+    }
+
+    public function test_admin_rejects_datetime_station_times(): void
+    {
+        $admin = $this->makeAdminUser();
+        Sanctum::actingAs($admin);
+
+        $schedule = Schedule::factory()->create();
+        $stationOne = Station::factory()->create();
+        $stationTwo = Station::factory()->create();
+
+        $scheduleStation = ScheduleStation::factory()->create([
+            'schedule_id' => $schedule->id,
+            'station_id' => $stationOne->id,
+            'sequence' => 1,
+        ]);
+
+        $this->patchJson('/api/schedules/'.$schedule->id.'/stations/'.$scheduleStation->id, [
+            'station_id' => $stationTwo->id,
+            'sequence' => 2,
+            'arrival_time' => '2026-08-04 20:30:00',
+            'departure_time' => '2026-08-04 20:35:00',
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['arrival_time', 'departure_time']);
     }
 
     public function test_admin_can_patch_schedule_station_by_id(): void

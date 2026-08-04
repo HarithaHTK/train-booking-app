@@ -50,7 +50,7 @@ class Schedule extends Model
     protected function casts(): array
     {
         return [
-            'departure_time' => 'datetime:H:i:s',
+            'departure_time' => 'string',
             'is_active' => 'boolean',
             'deleted_at' => 'datetime',
             'created_at' => 'datetime',

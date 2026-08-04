@@ -380,9 +380,10 @@ onMounted(async () => {
             <label class="form-label">Route</label>
             <Dropdown v-model="scheduleForm.route_id" :options="routeOptions" optionLabel="label" optionValue="value" placeholder="Select route" class="w-100" />
           </div>
-          <div>
+              <div>
             <label class="form-label">Departure Time</label>
             <InputText v-model="scheduleForm.departure_time" class="w-100" placeholder="20:00:00" />
+            <small class="text-muted">Use time only in HH:MM:SS format.</small>
           </div>
           <div class="schedule-switch-row">
             <InputSwitch v-model="scheduleForm.is_active" />

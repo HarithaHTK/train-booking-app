@@ -13,6 +13,7 @@ use App\Models\TrainRoute;
 use Illuminate\Http\Request as BaseRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use OpenApi\Annotations as OA;
 
 class ScheduleController extends Controller
@@ -348,11 +349,15 @@ class ScheduleController extends Controller
 
     private function formatSchedule(Schedule $schedule): array
     {
+        $departureTime = $schedule->departure_time instanceof Carbon
+            ? $schedule->departure_time->format('H:i:s')
+            : $schedule->departure_time;
+
         return [
             'id' => $schedule->id,
             'train_id' => $schedule->train_id,
             'route_id' => $schedule->route_id,
-            'departure_time' => $schedule->departure_time,
+            'departure_time' => $departureTime,
             'is_active' => $schedule->is_active,
             'train' => $schedule->train?->toArray(),
             'route' => $schedule->route ? [
@@ -377,13 +382,21 @@ class ScheduleController extends Controller
 
     private function formatScheduleStation(ScheduleStation $scheduleStation): array
     {
+        $arrivalTime = $scheduleStation->arrival_time instanceof Carbon
+            ? $scheduleStation->arrival_time->format('H:i:s')
+            : $scheduleStation->arrival_time;
+
+        $departureTime = $scheduleStation->departure_time instanceof Carbon
+            ? $scheduleStation->departure_time->format('H:i:s')
+            : $scheduleStation->departure_time;
+
         return [
             'id' => $scheduleStation->id,
             'schedule_id' => $scheduleStation->schedule_id,
             'station_id' => $scheduleStation->station_id,
             'sequence' => $scheduleStation->sequence,
-            'arrival_time' => $scheduleStation->arrival_time,
-            'departure_time' => $scheduleStation->departure_time,
+            'arrival_time' => $arrivalTime,
+            'departure_time' => $departureTime,
             'station' => $scheduleStation->station?->toArray(),
             'created_by' => $scheduleStation->created_by,
             'updated_by' => $scheduleStation->updated_by,
