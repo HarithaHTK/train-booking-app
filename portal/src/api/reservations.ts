@@ -52,6 +52,7 @@ export type Reservation = {
   created_at?: string | null
   updated_at?: string | null
   deleted_at?: string | null
+  isReserved?: boolean
   user?: ReservationUser | null
   schedule?: ReservationSchedule | null
   start_station?: ReservationStation | null

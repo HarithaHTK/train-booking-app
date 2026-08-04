@@ -10,6 +10,7 @@ import Dialog from 'primevue/dialog'
 import { fetchCurrentUser, type AuthUser } from '../../api/auth'
 import { createReservation, fetchSchedule, type Schedule, type ScheduleCoach } from '../../api/schedules'
 import { fetchStations, type Station } from '../../api/stations'
+import { fetchReservations, type Reservation } from '../../api/reservations'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,6 +24,7 @@ const activeCoachIndex = ref(0)
 const coachStrip = ref<HTMLElement | null>(null)
 const stations = ref<Station[]>([])
 const stationsLoading = ref(false)
+const journeyReservations = ref<Reservation[]>([])
 const journeyStartStation = ref<number | null>(null)
 const journeyEndStation = ref<number | null>(null)
 const journeyDate = ref<Date | null>(null)
@@ -149,12 +151,28 @@ function getSeatsForCoach(coach: ScheduleCoach): CoachSeat[] {
     id: index + 1,
     seatNumber: index + 1,
     label: `S${index + 1}`,
-    isReserved: false,
+    isReserved: isSeatReservedForSelectedJourney(coach.id, index + 1, index + 1),
   }))
 }
 
 function isReservedCoach(coach: ScheduleCoach) {
   return String(coach.type ?? '').toLowerCase() === 'reserved'
+}
+
+function isSeatReservedForSelectedJourney(coachId: number, seatId: number, seatNumber: number) {
+  return journeyReservations.value.some((reservation) =>
+    reservation.isReserved === true
+    && (
+      reservation.seat_id === seatId
+      || reservation.seat?.id === seatId
+    )
+    && (
+      reservation.seat?.coach_id === coachId
+      || Number(reservation.seat?.coach_id) === coachId
+      || reservation.seat?.seat_number === seatNumber
+      || Number(reservation.seat?.seat_number) === seatNumber
+    ),
+  )
 }
 
 function getSeatKey(coach: ScheduleCoach, seat: CoachSeat) {
@@ -414,6 +432,24 @@ async function loadSchedule() {
   }
 }
 
+async function loadJourneyReservations() {
+  if (!Number.isFinite(scheduleId.value) || !journeyDate.value) {
+    journeyReservations.value = []
+    return
+  }
+
+  try {
+    const response = await fetchReservations({
+      schedule_id: scheduleId.value,
+      travel_date: formatDateQuery(journeyDate.value),
+    })
+
+    journeyReservations.value = response.reservations ?? []
+  } catch {
+    journeyReservations.value = []
+  }
+}
+
 async function loadStations() {
   stationsLoading.value = true
   try {
@@ -431,12 +467,18 @@ watch([journeyStartStation, journeyEndStation, journeyDate, journeyTime], () => 
   syncQueryFromJourney()
 })
 
+watch(journeyDate, async () => {
+  if (!journeyReady.value) return
+  await loadJourneyReservations()
+})
+
 onMounted(() => {
   if (!syncJourneyFromQuery()) return
 
   loadUser()
   loadSchedule()
   loadStations()
+  loadJourneyReservations()
 })
 </script>
 

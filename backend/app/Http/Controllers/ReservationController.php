@@ -7,7 +7,7 @@ use App\Http\Requests\Reservation\UpdateReservationRequest;
 use App\Models\Reservation;
 use App\Models\Schedule;
 use App\Models\ScheduleStation;
-use App\Models\Seat;
+use App\Services\ReservationAvailabilityEngine;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +28,7 @@ class ReservationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Reservation::query()->with(['user', 'schedule.train', 'startStation', 'leaveStation', 'seat']);
+        $availabilityEngine = app(ReservationAvailabilityEngine::class);
 
         if (! $request->user()?->hasRole('admin')) {
             $query->where('user_id', $request->user()?->id);
@@ -61,8 +62,18 @@ class ReservationController extends Controller
             $query->where('status', $request->string('status'));
         }
 
+        $reservations = $query->latest()->get();
+
         return response()->json([
-            'reservations' => $query->latest()->get(),
+            'reservations' => $reservations->map(function (Reservation $reservation) use ($availabilityEngine) {
+                $reservation->setAttribute('isReserved', $availabilityEngine->isReserved(
+                    (int) $reservation->schedule_id,
+                    (int) $reservation->seat_id,
+                    $reservation->travel_date,
+                ));
+
+                return $reservation;
+            }),
         ]);
     }
 
@@ -74,17 +85,21 @@ class ReservationController extends Controller
         $reservations = DB::transaction(function () use ($validated, $userId) {
             $seatIds = array_values(array_unique($validated['seat_ids'] ?? [$validated['seat_id']]));
 
-            $seats = Seat::query()
-                ->whereIn('id', $seatIds)
+            $conflictingReservations = Reservation::query()
+                ->where('schedule_id', $validated['schedule_id'])
+                ->whereIn('seat_id', $seatIds)
+                ->whereNull('deleted_at')
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->when(
+                    array_key_exists('travel_date', $validated) && $validated['travel_date'],
+                    fn ($query) => $query->whereDate('travel_date', $validated['travel_date']),
+                    fn ($query) => $query->whereNull('travel_date')
+                )
                 ->lockForUpdate()
-                ->get()
-                ->keyBy('id');
+                ->pluck('seat_id')
+                ->all();
 
-            abort_if($seats->count() !== count($seatIds), 422, 'One or more selected seats could not be found.');
-
-            foreach ($seats as $seat) {
-                abort_if($seat->is_reserved, 422, 'One of the selected seats is already reserved.');
-            }
+            abort_if(! empty($conflictingReservations), 422, 'One or more selected seats are already reserved for this journey.');
 
             $reservations = collect();
 
@@ -102,11 +117,6 @@ class ReservationController extends Controller
                     'created_by' => $userId,
                     'updated_by' => $userId,
                 ]);
-
-                $seat = $seats->get($seatId);
-                $seat->is_reserved = true;
-                $seat->updated_by = $userId;
-                $seat->save();
 
                 $reservations->push($reservation);
             }
@@ -159,35 +169,21 @@ class ReservationController extends Controller
         $reservation->save();
         $reservation->delete();
 
-        $this->syncSeatReservationState($reservation->seat_id, $request->user()?->id);
-
         return response()->json([
             'message' => 'Reservation deleted successfully.',
         ]);
     }
 
-    private function syncSeatReservationState(int $seatId, ?int $userId = null): void
-    {
-        $seat = Seat::query()->whereKey($seatId)->first();
-
-        if (! $seat) {
-            return;
-        }
-
-        $isReserved = Reservation::query()
-            ->where('seat_id', $seatId)
-            ->whereNull('deleted_at')
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->exists();
-
-        $seat->is_reserved = $isReserved;
-        $seat->updated_by = $userId;
-        $seat->save();
-    }
-
     private function loadReservation(Reservation $reservation): Reservation
     {
-        return $reservation->load(['user', 'schedule.train', 'startStation', 'leaveStation', 'seat']);
+        $reservation->load(['user', 'schedule.train', 'startStation', 'leaveStation', 'seat']);
+        $reservation->setAttribute('isReserved', app(ReservationAvailabilityEngine::class)->isReserved(
+            (int) $reservation->schedule_id,
+            (int) $reservation->seat_id,
+            $reservation->travel_date,
+        ));
+
+        return $reservation;
     }
 
     private function authorizeReservation(Request $request, Reservation $reservation): void

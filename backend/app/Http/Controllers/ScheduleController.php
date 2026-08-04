@@ -10,6 +10,7 @@ use App\Models\Schedule;
 use App\Models\ScheduleStation;
 use App\Models\Station;
 use App\Models\TrainRoute;
+use App\Services\ReservationAvailabilityEngine;
 use Illuminate\Http\Request as BaseRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -194,6 +195,8 @@ class ScheduleController extends Controller
             'route.routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
             'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
         ]);
+
+        $this->applySeatReservationAvailability($schedule, $request->input('travel_date'));
 
         return response()->json([
             'schedule' => $this->formatSchedule($schedule),
@@ -405,5 +408,20 @@ class ScheduleController extends Controller
             'created_at' => $scheduleStation->created_at,
             'updated_at' => $scheduleStation->updated_at,
         ];
+    }
+
+    private function applySeatReservationAvailability(Schedule $schedule, mixed $travelDate): void
+    {
+        $availabilityEngine = app(ReservationAvailabilityEngine::class);
+
+        foreach ($schedule->train?->coaches ?? [] as $coach) {
+            foreach ($coach->seats ?? [] as $seat) {
+                $seat->setAttribute('isReserved', $availabilityEngine->isReserved(
+                    (int) $schedule->id,
+                    (int) $seat->id,
+                    $travelDate,
+                ));
+            }
+        }
     }
 }

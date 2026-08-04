@@ -4,7 +4,9 @@ namespace App\Http\Requests\Reservation;
 
 use App\Models\Schedule;
 use App\Models\ScheduleStation;
+use App\Models\Reservation;
 use App\Models\Seat;
+use App\Services\ReservationAvailabilityEngine;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -64,9 +66,12 @@ class StoreReservationRequest extends FormRequest
                 'integer',
                 'exists:seats,id',
                 function ($attribute, $value, $fail) {
-                    $seat = Seat::query()->find((int) $value);
+                    $seatId = (int) $value;
+                    $seat = Seat::query()->find($seatId);
+                    $scheduleId = (int) $this->input('schedule_id');
+                    $travelDate = $this->input('travel_date');
 
-                    if ($seat && $seat->is_reserved) {
+                    if ($seat && $this->isSeatAlreadyReservedForJourney($seatId, $scheduleId, $travelDate)) {
                         $fail('The selected seat is already reserved.');
                     }
                 },
@@ -76,9 +81,12 @@ class StoreReservationRequest extends FormRequest
                 'integer',
                 'exists:seats,id',
                 function ($attribute, $value, $fail) {
-                    $seat = Seat::query()->find((int) $value);
+                    $seatId = (int) $value;
+                    $seat = Seat::query()->find($seatId);
+                    $scheduleId = (int) $this->input('schedule_id');
+                    $travelDate = $this->input('travel_date');
 
-                    if ($seat && $seat->is_reserved) {
+                    if ($seat && $this->isSeatAlreadyReservedForJourney($seatId, $scheduleId, $travelDate)) {
                         $fail('One of the selected seats is already reserved.');
                     }
                 },
@@ -114,5 +122,10 @@ class StoreReservationRequest extends FormRequest
                 $validator->errors()->add('leave_station_id', 'The leave station must come after the start station.');
             }
         });
+    }
+
+    private function isSeatAlreadyReservedForJourney(int $seatId, int $scheduleId, mixed $travelDate): bool
+    {
+        return app(ReservationAvailabilityEngine::class)->isReserved($scheduleId, $seatId, $travelDate);
     }
 }
