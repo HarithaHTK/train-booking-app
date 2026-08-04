@@ -6,19 +6,21 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Annotations as OA;
 
 /**
  * @OA\Schema(
- *     schema="Station",
+ *     schema="ScheduleStation",
  *     type="object",
- *     required={"id", "name", "address", "is_active"},
+ *     required={"id", "schedule_id", "station_id", "sequence"},
  *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="name", type="string", example="Central Station"),
- *     @OA\Property(property="address", type="string", example="123 Main Street, City"),
- *     @OA\Property(property="is_active", type="boolean", example=true),
+ *     @OA\Property(property="schedule_id", type="integer", example=1),
+ *     @OA\Property(property="station_id", type="integer", example=2),
+ *     @OA\Property(property="sequence", type="integer", example=1),
+ *     @OA\Property(property="arrival_time", type="string", format="time", nullable=true, example="20:30:00"),
+ *     @OA\Property(property="departure_time", type="string", format="time", nullable=true, example="20:35:00"),
+ *     @OA\Property(property="station", ref="#/components/schemas/Station"),
  *     @OA\Property(property="created_by", type="integer", nullable=true, example=1),
  *     @OA\Property(property="updated_by", type="integer", nullable=true, example=1),
  *     @OA\Property(property="deleted_by", type="integer", nullable=true, example=null),
@@ -28,31 +30,40 @@ use OpenApi\Annotations as OA;
  * )
  */
 #[Fillable([
-    'name',
-    'address',
-    'is_active',
+    'schedule_id',
+    'station_id',
+    'sequence',
+    'arrival_time',
+    'departure_time',
     'created_by',
     'updated_by',
     'deleted_by',
 ])]
-class Station extends Model
+class ScheduleStation extends Model
 {
-    /** @use HasFactory<\Database\Factories\StationFactory> */
+    /** @use HasFactory<\Database\Factories\ScheduleStationFactory> */
     use HasFactory, SoftDeletes;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
+            'sequence' => 'integer',
+            'arrival_time' => 'datetime:H:i:s',
+            'departure_time' => 'datetime:H:i:s',
             'deleted_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    public function schedule(): BelongsTo
+    {
+        return $this->belongsTo(Schedule::class, 'schedule_id');
+    }
+
+    public function station(): BelongsTo
+    {
+        return $this->belongsTo(Station::class, 'station_id');
     }
 
     public function createdBy(): BelongsTo
@@ -68,10 +79,5 @@ class Station extends Model
     public function deletedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deleted_by');
-    }
-
-    public function scheduleStations(): HasMany
-    {
-        return $this->hasMany(ScheduleStation::class, 'station_id');
     }
 }
