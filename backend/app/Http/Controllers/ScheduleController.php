@@ -44,7 +44,12 @@ class ScheduleController extends Controller
             ])
             ->get()
             ->map(function (Schedule $schedule) use ($travelDate) {
-                $this->applySeatReservationAvailability($schedule, $travelDate);
+                $this->applySeatReservationAvailability(
+                    $schedule,
+                    $travelDate,
+                    request()->input('start_station_id'),
+                    request()->input('leave_station_id')
+                );
 
                 return $this->formatSchedule($schedule);
             })
@@ -127,7 +132,12 @@ class ScheduleController extends Controller
             ->latest()
             ->get()
             ->map(function (Schedule $schedule) use ($travelDate) {
-                $this->applySeatReservationAvailability($schedule, $travelDate);
+                $this->applySeatReservationAvailability(
+                    $schedule,
+                    $travelDate,
+                    request()->input('start_station_id'),
+                    request()->input('leave_station_id')
+                );
 
                 return $this->formatSchedule($schedule);
             })
@@ -208,7 +218,12 @@ class ScheduleController extends Controller
             'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
         ]);
 
-        $this->applySeatReservationAvailability($schedule, $request->input('travel_date'));
+        $this->applySeatReservationAvailability(
+            $schedule,
+            $request->input('travel_date'),
+            $request->input('start_station_id'),
+            $request->input('leave_station_id')
+        );
 
         return response()->json([
             'schedule' => $this->formatSchedule($schedule),
@@ -422,7 +437,7 @@ class ScheduleController extends Controller
         ];
     }
 
-    private function applySeatReservationAvailability(Schedule $schedule, mixed $travelDate): void
+    private function applySeatReservationAvailability(Schedule $schedule, mixed $travelDate, mixed $startStationId = null, mixed $leaveStationId = null): void
     {
         $availabilityEngine = app(ReservationAvailabilityEngine::class);
 
@@ -432,6 +447,8 @@ class ScheduleController extends Controller
                     (int) $schedule->id,
                     (int) $seat->id,
                     $travelDate,
+                    $startStationId !== null ? (int) $startStationId : null,
+                    $leaveStationId !== null ? (int) $leaveStationId : null,
                 );
 
                 $seat->setAttribute('isReserved', $isReserved);

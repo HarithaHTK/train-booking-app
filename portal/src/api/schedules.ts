@@ -16,6 +16,8 @@ export type ScheduleCoach = {
 
 export type ScheduleQuery = {
   travel_date?: string | null
+  start_station_id?: number | null
+  leave_station_id?: number | null
 }
 
 export type ScheduleTrain = {
@@ -119,6 +121,14 @@ export async function fetchSchedule(scheduleId: number, query: ScheduleQuery = {
 
   if (query.travel_date) {
     params.set('travel_date', query.travel_date)
+  }
+
+  if (query.start_station_id !== undefined && query.start_station_id !== null) {
+    params.set('start_station_id', String(query.start_station_id))
+  }
+
+  if (query.leave_station_id !== undefined && query.leave_station_id !== null) {
+    params.set('leave_station_id', String(query.leave_station_id))
   }
 
   const suffix = params.toString() ? `?${params.toString()}` : ''

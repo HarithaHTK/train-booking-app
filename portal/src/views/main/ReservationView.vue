@@ -66,6 +66,12 @@ function parseTimeQuery(value: unknown) {
   return time
 }
 
+function formatTimeOnly(value: Date | null) {
+  if (!value) return 'N/A'
+
+  return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`
+}
+
 function formatDateQuery(value: Date | null) {
   if (!value) return undefined
 
@@ -422,6 +428,8 @@ async function loadSchedule() {
   try {
     const response = await fetchSchedule(scheduleId.value, {
       travel_date: formatDateQuery(journeyDate.value),
+      start_station_id: journeyStartStation.value,
+      leave_station_id: journeyEndStation.value,
     })
     schedule.value = response.schedule
     activeCoachIndex.value = 0
@@ -468,6 +476,12 @@ watch([journeyStartStation, journeyEndStation, journeyDate, journeyTime], () => 
 })
 
 watch(journeyDate, async () => {
+  if (!journeyReady.value) return
+  await loadSchedule()
+  await loadJourneyReservations()
+})
+
+watch([journeyStartStation, journeyEndStation], async () => {
   if (!journeyReady.value) return
   await loadSchedule()
   await loadJourneyReservations()
@@ -534,7 +548,12 @@ onMounted(() => {
                   </article>
                   <article class="summary-card">
                     <span class="summary-label">Journey time</span>
-                    <Calendar v-model="journeyTime" timeOnly hourFormat="24" class="w-100" showIcon />
+                    <input
+                      :value="formatTimeOnly(journeyTime)"
+                      type="text"
+                      class="w-100 p-inputtext p-component"
+                      readonly
+                    />
                   </article>
                 </section>
 
@@ -689,7 +708,7 @@ onMounted(() => {
             <article class="booking-detail-card">
               <span class="summary-label">Journey</span>
               <p>{{ getJourneyStationName(journeyStartStation) }} → {{ getJourneyStationName(journeyEndStation) }}</p>
-              <p>{{ formatDateOnly(journeyDate) }} · {{ journeyTime ? `${String(journeyTime.getHours()).padStart(2, '0')}:${String(journeyTime.getMinutes()).padStart(2, '0')}` : 'N/A' }}</p>
+              <p>{{ formatDateOnly(journeyDate) }} · {{ formatTimeOnly(journeyTime) }}</p>
             </article>
           </div>
         </section>

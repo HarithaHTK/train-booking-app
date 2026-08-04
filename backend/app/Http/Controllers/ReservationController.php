@@ -84,20 +84,17 @@ class ReservationController extends Controller
 
         $reservations = DB::transaction(function () use ($validated, $userId) {
             $seatIds = array_values(array_unique($validated['seat_ids'] ?? [$validated['seat_id']]));
+            $availabilityEngine = app(ReservationAvailabilityEngine::class);
 
-            $conflictingReservations = Reservation::query()
-                ->where('schedule_id', $validated['schedule_id'])
-                ->whereIn('seat_id', $seatIds)
-                ->whereNull('deleted_at')
-                ->whereIn('status', ['pending', 'confirmed'])
-                ->when(
-                    array_key_exists('travel_date', $validated) && $validated['travel_date'],
-                    fn ($query) => $query->whereDate('travel_date', $validated['travel_date']),
-                    fn ($query) => $query->whereNull('travel_date')
-                )
-                ->lockForUpdate()
-                ->pluck('seat_id')
-                ->all();
+            $conflictingReservations = collect($seatIds)->filter(function (int $seatId) use ($availabilityEngine, $validated) {
+                return $availabilityEngine->isReserved(
+                    (int) $validated['schedule_id'],
+                    $seatId,
+                    $validated['travel_date'] ?? null,
+                    (int) $validated['start_station_id'],
+                    (int) $validated['leave_station_id'],
+                );
+            })->values()->all();
 
             abort_if(! empty($conflictingReservations), 422, 'One or more selected seats are already reserved for this journey.');
 

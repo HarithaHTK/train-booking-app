@@ -4,6 +4,8 @@ namespace App\Http\Requests\Reservation;
 
 use App\Models\Schedule;
 use App\Models\ScheduleStation;
+use App\Models\Reservation;
+use App\Services\ReservationAvailabilityEngine;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -72,6 +74,8 @@ class UpdateReservationRequest extends FormRequest
             $scheduleId = (int) $this->input('schedule_id', $reservation?->schedule_id);
             $startStationId = (int) $this->input('start_station_id', $reservation?->start_station_id);
             $leaveStationId = (int) $this->input('leave_station_id', $reservation?->leave_station_id);
+            $seatId = (int) $this->input('seat_id', $reservation?->seat_id);
+            $travelDate = $this->input('travel_date', $reservation?->travel_date);
 
             if (! $scheduleId || ! $startStationId || ! $leaveStationId) {
                 return;
@@ -88,6 +92,10 @@ class UpdateReservationRequest extends FormRequest
 
             if ($start && $leave && $start->sequence >= $leave->sequence) {
                 $validator->errors()->add('leave_station_id', 'The leave station must come after the start station.');
+            }
+
+            if ($seatId && app(ReservationAvailabilityEngine::class)->isReserved($scheduleId, $seatId, $travelDate, $startStationId, $leaveStationId)) {
+                $validator->errors()->add('seat_id', 'The selected seat is already reserved.');
             }
         });
     }

@@ -70,8 +70,10 @@ class StoreReservationRequest extends FormRequest
                     $seat = Seat::query()->find($seatId);
                     $scheduleId = (int) $this->input('schedule_id');
                     $travelDate = $this->input('travel_date');
+                    $startStationId = (int) $this->input('start_station_id');
+                    $leaveStationId = (int) $this->input('leave_station_id');
 
-                    if ($seat && $this->isSeatAlreadyReservedForJourney($seatId, $scheduleId, $travelDate)) {
+                    if ($seat && $this->isSeatAlreadyReservedForJourney($seatId, $scheduleId, $travelDate, $startStationId, $leaveStationId)) {
                         $fail('The selected seat is already reserved.');
                     }
                 },
@@ -85,8 +87,10 @@ class StoreReservationRequest extends FormRequest
                     $seat = Seat::query()->find($seatId);
                     $scheduleId = (int) $this->input('schedule_id');
                     $travelDate = $this->input('travel_date');
+                    $startStationId = (int) $this->input('start_station_id');
+                    $leaveStationId = (int) $this->input('leave_station_id');
 
-                    if ($seat && $this->isSeatAlreadyReservedForJourney($seatId, $scheduleId, $travelDate)) {
+                    if ($seat && $this->isSeatAlreadyReservedForJourney($seatId, $scheduleId, $travelDate, $startStationId, $leaveStationId)) {
                         $fail('One of the selected seats is already reserved.');
                     }
                 },
@@ -124,8 +128,8 @@ class StoreReservationRequest extends FormRequest
         });
     }
 
-    private function isSeatAlreadyReservedForJourney(int $seatId, int $scheduleId, mixed $travelDate): bool
+    private function isSeatAlreadyReservedForJourney(int $seatId, int $scheduleId, mixed $travelDate, ?int $startStationId = null, ?int $leaveStationId = null): bool
     {
-        return app(ReservationAvailabilityEngine::class)->isReserved($scheduleId, $seatId, $travelDate);
+        return app(ReservationAvailabilityEngine::class)->isReserved($scheduleId, $seatId, $travelDate, $startStationId, $leaveStationId);
     }
 }
