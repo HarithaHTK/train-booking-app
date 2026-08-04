@@ -85,7 +85,9 @@ class ScheduleSeeder extends Seeder
                 ]
             );
 
-            ScheduleStation::query()->where('schedule_id', $schedule->id)->delete();
+            ScheduleStation::withTrashed()
+                ->where('schedule_id', $schedule->id)
+                ->forceDelete();
 
             foreach ($routeStations as $routeIndex => $routeStation) {
                 $timeSet = $demoSchedule['station_times'][$routeIndex] ?? [

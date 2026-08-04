@@ -38,6 +38,8 @@ Route::middleware(['allow.cors'])->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 
+    Route::get('/stations', [StationController::class, 'index']);
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
@@ -76,10 +78,13 @@ Route::middleware(['allow.cors'])->group(function () {
             Route::put('schedules/{schedule}', [ScheduleController::class, 'update']);
             Route::patch('schedules/{schedule}/stations/{schedule_station}', [ScheduleController::class, 'updateStation']);
             Route::patch('schedules/{schedule}/stations/by-station/{station}', [ScheduleController::class, 'updateStationByStation']);
-        });
 
-        Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
-            ->apiResource('stations', StationController::class);
+            Route::post('stations', [StationController::class, 'store']);
+            Route::get('stations/{station}', [StationController::class, 'show']);
+            Route::put('stations/{station}', [StationController::class, 'update']);
+            Route::patch('stations/{station}', [StationController::class, 'update']);
+            Route::delete('stations/{station}', [StationController::class, 'destroy']);
+        });
     });
 
     // Serve the static OpenAPI JSON, with the generated file as a fallback if needed
