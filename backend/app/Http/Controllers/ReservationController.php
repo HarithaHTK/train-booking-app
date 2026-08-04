@@ -7,8 +7,10 @@ use App\Http\Requests\Reservation\UpdateReservationRequest;
 use App\Models\Reservation;
 use App\Models\Schedule;
 use App\Models\ScheduleStation;
+use App\Models\Seat;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use OpenApi\Annotations as OA;
 
 class ReservationController extends Controller
@@ -65,22 +67,52 @@ class ReservationController extends Controller
         $validated = $request->validated();
         $userId = $request->user()?->id;
 
-        $reservation = Reservation::create([
-            'user_id' => $userId,
-            'schedule_id' => $validated['schedule_id'],
-            'start_station_id' => $validated['start_station_id'],
-            'leave_station_id' => $validated['leave_station_id'],
-            'seat_id' => $validated['seat_id'],
-            'status' => $validated['status'] ?? 'pending',
-            'checked_in_at' => $validated['checked_in_at'] ?? null,
-            'checked_out_at' => $validated['checked_out_at'] ?? null,
-            'created_by' => $userId,
-            'updated_by' => $userId,
-        ]);
+        $reservations = DB::transaction(function () use ($validated, $userId) {
+            $seatIds = array_values(array_unique($validated['seat_ids'] ?? [$validated['seat_id']]));
+
+            $seats = Seat::query()
+                ->whereIn('id', $seatIds)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            abort_if($seats->count() !== count($seatIds), 422, 'One or more selected seats could not be found.');
+
+            foreach ($seats as $seat) {
+                abort_if($seat->is_reserved, 422, 'One of the selected seats is already reserved.');
+            }
+
+            $reservations = collect();
+
+            foreach ($seatIds as $seatId) {
+                $reservation = Reservation::create([
+                    'user_id' => $userId,
+                    'schedule_id' => $validated['schedule_id'],
+                    'start_station_id' => $validated['start_station_id'],
+                    'leave_station_id' => $validated['leave_station_id'],
+                    'seat_id' => $seatId,
+                    'status' => $validated['status'] ?? 'pending',
+                    'checked_in_at' => $validated['checked_in_at'] ?? null,
+                    'checked_out_at' => $validated['checked_out_at'] ?? null,
+                    'created_by' => $userId,
+                    'updated_by' => $userId,
+                ]);
+
+                $seat = $seats->get($seatId);
+                $seat->is_reserved = true;
+                $seat->updated_by = $userId;
+                $seat->save();
+
+                $reservations->push($reservation);
+            }
+
+            return $reservations;
+        });
 
         return response()->json([
             'message' => 'Reservation created successfully.',
-            'reservation' => $this->loadReservation($reservation),
+            'reservations' => $reservations->map(fn (Reservation $reservation) => $this->loadReservation($reservation)),
+            'reservation' => $this->loadReservation($reservations->first()),
         ], 201);
     }
 
@@ -98,10 +130,21 @@ class ReservationController extends Controller
         $this->authorizeReservation($request, $reservation);
 
         $validated = $request->validated();
+        $previousStatus = $reservation->status;
 
         $reservation->fill($validated);
         $reservation->updated_by = $request->user()?->id;
         $reservation->save();
+
+        if (($validated['status'] ?? null) === 'cancelled' && $previousStatus !== 'cancelled') {
+            $seat = Seat::query()->whereKey($reservation->seat_id)->first();
+
+            if ($seat) {
+                $seat->is_reserved = false;
+                $seat->updated_by = $request->user()?->id;
+                $seat->save();
+            }
+        }
 
         return response()->json([
             'message' => 'Reservation updated successfully.',
@@ -112,6 +155,13 @@ class ReservationController extends Controller
     public function destroy(Request $request, Reservation $reservation): JsonResponse
     {
         $this->authorizeReservation($request, $reservation);
+
+        $seat = Seat::query()->whereKey($reservation->seat_id)->first();
+        if ($seat) {
+            $seat->is_reserved = false;
+            $seat->updated_by = $request->user()?->id;
+            $seat->save();
+        }
 
         $reservation->deleted_by = $request->user()?->id;
         $reservation->save();

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Reservation;
 
 use App\Models\Schedule;
 use App\Models\ScheduleStation;
+use App\Models\Seat;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -57,7 +58,31 @@ class StoreReservationRequest extends FormRequest
                     }
                 },
             ],
-            'seat_id' => ['required', 'integer', 'exists:seats,id'],
+            'seat_id' => [
+                'sometimes',
+                'required_without:seat_ids',
+                'integer',
+                'exists:seats,id',
+                function ($attribute, $value, $fail) {
+                    $seat = Seat::query()->find((int) $value);
+
+                    if ($seat && $seat->is_reserved) {
+                        $fail('The selected seat is already reserved.');
+                    }
+                },
+            ],
+            'seat_ids' => ['sometimes', 'required_without:seat_id', 'array', 'min:1'],
+            'seat_ids.*' => [
+                'integer',
+                'exists:seats,id',
+                function ($attribute, $value, $fail) {
+                    $seat = Seat::query()->find((int) $value);
+
+                    if ($seat && $seat->is_reserved) {
+                        $fail('One of the selected seats is already reserved.');
+                    }
+                },
+            ],
             'status' => ['sometimes', 'string', Rule::in(['pending', 'confirmed', 'cancelled', 'completed'])],
             'checked_in_at' => ['sometimes', 'nullable', 'date'],
             'checked_out_at' => ['sometimes', 'nullable', 'date'],

@@ -63,6 +63,21 @@ export type Schedule = {
   updated_at?: string | null
 }
 
+export type ReservationPayload = {
+  schedule_id: number
+  start_station_id: number
+  leave_station_id: number
+  seat_id?: number
+  seat_ids?: number[]
+  status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+}
+
+export type ReservationResponse = {
+  message: string
+  reservation: unknown
+  reservations?: unknown[]
+}
+
 type ScheduleResponse = {
   schedule: Schedule
 }
@@ -96,4 +111,11 @@ async function request(path: string, init: RequestInit = {}): Promise<any> {
 
 export async function fetchSchedule(scheduleId: number): Promise<ScheduleResponse> {
   return request(`/schedules/${scheduleId}`)
+}
+
+export async function createReservation(payload: ReservationPayload): Promise<ReservationResponse> {
+  return request('/reservations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }

@@ -6,8 +6,9 @@ import Calendar from 'primevue/calendar'
 import Card from 'primevue/card'
 import Message from 'primevue/message'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import { fetchCurrentUser, type AuthUser } from '../../api/auth'
-import { fetchSchedule, type Schedule, type ScheduleCoach } from '../../api/schedules'
+import { createReservation, fetchSchedule, type Schedule, type ScheduleCoach } from '../../api/schedules'
 import { fetchStations, type Station } from '../../api/stations'
 
 const route = useRoute()
@@ -27,6 +28,8 @@ const journeyEndStation = ref<number | null>(null)
 const journeyDate = ref<Date | null>(null)
 const journeyTime = ref<Date | null>(null)
 const journeyReady = ref(false)
+const selectedSeatKeys = ref<Set<string>>(new Set())
+const bookingDialogVisible = ref(false)
 
 const scheduleId = computed(() => Number(route.params.scheduleId))
 const journeyQueryFrom = computed(() => Number(route.query.from))
@@ -74,6 +77,7 @@ const startStationOptions = computed(() => routeStationOptions().filter((station
 const endStationOptions = computed(() => routeStationOptions().filter((station) => station.id !== journeyStartStation.value))
 
 type CoachSeat = {
+  id: number
   seatNumber: number
   label: string
   isReserved: boolean
@@ -82,6 +86,16 @@ type CoachSeat = {
 type CoachSeatRow = {
   left: CoachSeat[]
   right: CoachSeat[]
+}
+
+type SelectedSeatDetail = {
+  coachId: number
+  coachName: string
+  coachType: string
+  seatId: number
+  seatLabel: string
+  seatNumber: number
+  seatStatus: string
 }
 
 function getCoachRows() {
@@ -105,6 +119,7 @@ function getSeatsForCoach(coach: ScheduleCoach): CoachSeat[] {
   if (seats.length > 0) {
     return seats
       .map((seat, index) => ({
+        id: Number(seat.id ?? index + 1),
         seatNumber: Number.isFinite(Number(seat.seat_number)) ? Number(seat.seat_number) : index + 1,
         label: `S${Number.isFinite(Number(seat.seat_number)) ? Number(seat.seat_number) : index + 1}`,
         isReserved: Boolean(seat.is_reserved),
@@ -113,10 +128,124 @@ function getSeatsForCoach(coach: ScheduleCoach): CoachSeat[] {
   }
 
   return Array.from({ length: seatCount }, (_, index) => ({
+    id: index + 1,
     seatNumber: index + 1,
     label: `S${index + 1}`,
     isReserved: false,
   }))
+}
+
+function isReservedCoach(coach: ScheduleCoach) {
+  return String(coach.type ?? '').toLowerCase() === 'reserved'
+}
+
+function getSeatKey(coach: ScheduleCoach, seat: CoachSeat) {
+  return `${coach.id}:${seat.id}:${seat.seatNumber}`
+}
+
+function isSeatSelectable(coach: ScheduleCoach, seat: CoachSeat) {
+  return isReservedCoach(coach) && !seat.isReserved
+}
+
+function isSeatSelected(coach: ScheduleCoach, seat: CoachSeat) {
+  return selectedSeatKeys.value.has(getSeatKey(coach, seat))
+}
+
+function toggleSeatSelection(coach: ScheduleCoach, seat: CoachSeat) {
+  if (!isSeatSelectable(coach, seat)) return
+
+  const key = getSeatKey(coach, seat)
+  const next = new Set(selectedSeatKeys.value)
+
+  if (next.has(key)) {
+    next.delete(key)
+  } else {
+    next.add(key)
+  }
+
+  selectedSeatKeys.value = next
+}
+
+function resetSelection() {
+  selectedSeatKeys.value = new Set()
+}
+
+function getSelectedSeats() {
+  return (schedule.value?.train?.coaches ?? []).flatMap((coach) =>
+    getSeatsForCoach(coach)
+      .filter((seat) => isSeatSelected(coach, seat))
+      .map((seat) => ({
+        coachId: coach.id,
+        coachName: coach.name ?? 'N/A',
+        coachType: coach.type ?? 'N/A',
+        seatId: seat.id,
+        seatLabel: seat.label,
+        seatNumber: seat.seatNumber,
+        seatStatus: seat.isReserved ? 'Reserved' : 'Available',
+      })),
+  ) as SelectedSeatDetail[]
+}
+
+function getJourneyStationName(stationId: number | null) {
+  if (!stationId) return 'N/A'
+  return stations.value.find((station) => station.id === stationId)?.name ?? `Station ${stationId}`
+}
+
+function getSelectedReservationRows() {
+  return getSelectedSeats().map((seat) => ({
+    ...seat,
+    scheduleId: schedule.value?.id ?? scheduleId.value,
+    routeName: schedule.value?.route?.name ?? 'N/A',
+    trainNumber: schedule.value?.train?.train_number ?? 'N/A',
+    trainName: schedule.value?.train?.train_name ?? 'Train',
+    departureTime: schedule.value?.departure_time ?? 'N/A',
+    journeyStart: getJourneyStationName(journeyStartStation.value),
+    journeyEnd: getJourneyStationName(journeyEndStation.value),
+    journeyDate: journeyDate.value ? journeyDate.value.toISOString().slice(0, 10) : 'N/A',
+    journeyTime: journeyTime.value ? `${String(journeyTime.value.getHours()).padStart(2, '0')}:${String(journeyTime.value.getMinutes()).padStart(2, '0')}` : 'N/A',
+    status: 'pending',
+  }))
+}
+
+function openBookingDialog() {
+  if (!getSelectedSeats().length) {
+    error.value = 'Please select one or more seats to book.'
+    return
+  }
+
+  error.value = ''
+  bookingDialogVisible.value = true
+}
+
+async function confirmBooking() {
+  const selectedSeats = getSelectedSeats()
+  if (!selectedSeats.length) {
+    bookingDialogVisible.value = false
+    error.value = 'Please select one or more seats to book.'
+    return
+  }
+
+  try {
+    const response = await createReservation({
+      schedule_id: scheduleId.value,
+      start_station_id: journeyStartStation.value ?? 0,
+      leave_station_id: journeyEndStation.value ?? 0,
+      seat_ids: selectedSeats.map((seat) => seat.seatId),
+      status: 'confirmed',
+    })
+
+    message.value = response.message || 'Reservation created successfully.'
+    error.value = ''
+    bookingDialogVisible.value = false
+    resetSelection()
+    await loadSchedule()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to create reservation.'
+  }
+}
+
+function bookSelectedSeats() {
+  openBookingDialog()
 }
 
 function buildCoachSeatRows(coach: ScheduleCoach): CoachSeatRow[] {
@@ -389,6 +518,17 @@ onMounted(() => {
                     </div>
                   </div>
 
+                  <div class="selection-actions">
+                    <div class="selection-summary">
+                      <span class="summary-label">Selected seats</span>
+                      <p>{{ getSelectedSeats().length }} seat{{ getSelectedSeats().length === 1 ? '' : 's' }} selected</p>
+                    </div>
+                    <div class="selection-buttons">
+                      <Button label="Reset selection" severity="secondary" outlined @click="resetSelection" />
+                      <Button label="Book" icon="pi pi-check" :disabled="!getSelectedSeats().length" @click="bookSelectedSeats" />
+                    </div>
+                  </div>
+
                   <div ref="coachStrip" class="coach-strip" @scroll.passive="onCoachScroll">
                     <article v-for="coach in getCoachRows()" :key="coach.id" class="coach-item">
                       <div class="coach-item-header">
@@ -399,18 +539,38 @@ onMounted(() => {
                         <p class="coach-seat-count">{{ coach.seat_count ?? coach.total_seats ?? 0 }} seats</p>
                       </div>
 
+                      <Message v-if="!isReservedCoach(coach)" severity="warn" class="coach-warning mb-3">
+                        Unreserved coach seats cannot be selected.
+                      </Message>
+
                       <div class="coach-seat-map">
                         <div v-for="row in buildCoachSeatRows(coach)" :key="`${coach.id}-${row.left[0]?.seatNumber ?? 0}`" class="seat-row">
                           <div class="seat-group seat-group-left">
-                            <span v-for="seat in row.left" :key="`${coach.id}-${seat.seatNumber}`" class="seat-box" :class="{ reserved: seat.isReserved }">
+                            <button
+                              v-for="seat in row.left"
+                              :key="`${coach.id}-${seat.seatNumber}`"
+                              type="button"
+                              class="seat-box"
+                              :class="{ reserved: seat.isReserved, selectable: isSeatSelectable(coach, seat), selected: isSeatSelected(coach, seat), locked: !isSeatSelectable(coach, seat) }"
+                              :disabled="!isSeatSelectable(coach, seat)"
+                              @click="toggleSeatSelection(coach, seat)"
+                            >
                               {{ seat.label }}
-                            </span>
+                            </button>
                           </div>
                           <div class="seat-gap" aria-hidden="true"></div>
                           <div class="seat-group seat-group-right">
-                            <span v-for="seat in row.right" :key="`${coach.id}-${seat.seatNumber}`" class="seat-box" :class="{ reserved: seat.isReserved }">
+                            <button
+                              v-for="seat in row.right"
+                              :key="`${coach.id}-${seat.seatNumber}`"
+                              type="button"
+                              class="seat-box"
+                              :class="{ reserved: seat.isReserved, selectable: isSeatSelectable(coach, seat), selected: isSeatSelected(coach, seat), locked: !isSeatSelectable(coach, seat) }"
+                              :disabled="!isSeatSelectable(coach, seat)"
+                              @click="toggleSeatSelection(coach, seat)"
+                            >
                               {{ seat.label }}
-                            </span>
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -424,6 +584,76 @@ onMounted(() => {
         </div>
       </template>
     </Card>
+
+    <Dialog v-model:visible="bookingDialogVisible" modal header="Confirm reservation" :style="{ width: 'min(96vw, 920px)' }" :draggable="false">
+      <div class="booking-dialog">
+        <section class="booking-dialog-section">
+          <h3>Reservation payload</h3>
+          <div class="booking-details-grid">
+            <article class="booking-detail-card">
+              <span class="summary-label">Schedule</span>
+              <p>{{ schedule?.id ?? scheduleId }}</p>
+            </article>
+            <article class="booking-detail-card">
+              <span class="summary-label">Start station</span>
+              <p>{{ getJourneyStationName(journeyStartStation) }}</p>
+            </article>
+            <article class="booking-detail-card">
+              <span class="summary-label">Leave station</span>
+              <p>{{ getJourneyStationName(journeyEndStation) }}</p>
+            </article>
+            <article class="booking-detail-card">
+              <span class="summary-label">Status</span>
+              <p>pending</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="booking-dialog-section">
+          <h3>Trip details</h3>
+          <div class="booking-details-grid">
+            <article class="booking-detail-card">
+              <span class="summary-label">Train</span>
+              <p>{{ schedule?.train?.train_number ?? 'N/A' }} · {{ schedule?.train?.train_name ?? 'Train' }}</p>
+            </article>
+            <article class="booking-detail-card">
+              <span class="summary-label">Route</span>
+              <p>{{ schedule?.route?.name ?? 'N/A' }}</p>
+            </article>
+            <article class="booking-detail-card">
+              <span class="summary-label">Departure</span>
+              <p>{{ schedule?.departure_time ?? 'N/A' }}</p>
+            </article>
+            <article class="booking-detail-card">
+              <span class="summary-label">Journey</span>
+              <p>{{ getJourneyStationName(journeyStartStation) }} → {{ getJourneyStationName(journeyEndStation) }}</p>
+              <p>{{ journeyDate ? journeyDate.toISOString().slice(0, 10) : 'N/A' }} · {{ journeyTime ? `${String(journeyTime.getHours()).padStart(2, '0')}:${String(journeyTime.getMinutes()).padStart(2, '0')}` : 'N/A' }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="booking-dialog-section">
+          <h3>Selected seats</h3>
+          <div class="booking-seat-list">
+            <article v-for="seat in getSelectedReservationRows()" :key="`${seat.coachId}-${seat.seatId}`" class="booking-seat-item">
+              <div>
+                <p class="booking-seat-title">Seat {{ seat.seatLabel }}</p>
+                <p>Coach {{ seat.coachName }} · {{ seat.coachType }}</p>
+              </div>
+              <div class="booking-seat-meta">
+                <span>Seat #{{ seat.seatNumber }}</span>
+                <span>{{ seat.seatStatus }}</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <div class="booking-dialog-actions">
+          <Button label="Cancel" severity="secondary" text @click="bookingDialogVisible = false" />
+          <Button label="Confirm booking" icon="pi pi-check" @click="confirmBooking" />
+        </div>
+      </div>
+    </Dialog>
   </main>
 </template>
 
@@ -563,6 +793,33 @@ onMounted(() => {
   margin-top: 1.5rem;
 }
 
+.coach-warning {
+  margin-bottom: 0.75rem;
+}
+
+.selection-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--border-light);
+}
+
+.selection-summary p {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+}
+
+.selection-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .coach-carousel-header {
   display: flex;
   align-items: center;
@@ -661,6 +918,8 @@ onMounted(() => {
   background: var(--panel-bg);
   border: 1px solid var(--border-light);
   font-weight: 600;
+  width: 100%;
+  cursor: pointer;
 }
 
 .seat-box.reserved {
@@ -668,10 +927,90 @@ onMounted(() => {
   color: #991b1b;
 }
 
+.seat-box.selectable:hover {
+  border-color: var(--primary-color);
+}
+
+.seat-box.selected {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.seat-box.locked {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.seat-box:disabled {
+  pointer-events: none;
+}
+
+.booking-dialog {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.booking-dialog-section h3 {
+  margin: 0 0 0.75rem;
+}
+
+.booking-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.booking-detail-card,
+.booking-seat-item {
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--border-light);
+}
+
+.booking-detail-card p,
+.booking-seat-item p {
+  margin: 0.15rem 0 0;
+}
+
+.booking-seat-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.booking-seat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.booking-seat-title {
+  font-weight: 700;
+}
+
+.booking-seat-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  color: var(--text-secondary);
+}
+
+.booking-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 @media (max-width: 768px) {
   .reservation-header,
   .coach-carousel-header,
-  .coach-item-header {
+  .coach-item-header,
+  .selection-actions,
+  .booking-seat-item,
+  .booking-dialog-actions {
     flex-direction: column;
     align-items: stretch;
   }
@@ -686,6 +1025,10 @@ onMounted(() => {
 
   .seat-group {
     grid-template-columns: repeat(2, minmax(6.5rem, 6.5rem));
+  }
+
+  .booking-seat-meta {
+    align-items: flex-start;
   }
 }
 </style>
