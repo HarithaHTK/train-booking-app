@@ -189,7 +189,7 @@ class ScheduleController extends Controller
     public function show(Request $request, Schedule $schedule): JsonResponse
     {
         $schedule->load([
-            'train',
+            'train.coaches',
             'route.routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
             'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
         ]);

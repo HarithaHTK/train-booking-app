@@ -92,6 +92,13 @@ function getTotalSeats(schedule: JourneySchedule) {
   return getCoachRows(schedule).reduce((sum, coach) => sum + (coach.seat_count ?? coach.total_seats ?? 0), 0)
 }
 
+function openReservation(schedule: JourneySchedule) {
+  router.push({
+    name: 'reservation-detail',
+    params: { scheduleId: String(schedule.id) },
+  })
+}
+
 const fromOptions = computed(() => stations.value.filter((station) => station.id !== journeyTo.value))
 const toOptions = computed(() => stations.value.filter((station) => station.id !== journeyFrom.value))
 
@@ -286,6 +293,7 @@ onMounted(() => {
                         <span>Reservable coaches: {{ getReservableCoaches(schedule) }}</span>
                         <span>Total seats: {{ getTotalSeats(schedule) }}</span>
                       </div>
+                      <Button label="Make reservation" class="mt-2" @click="openReservation(schedule)" />
                     </li>
                   </ul>
                 </section>

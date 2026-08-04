@@ -79,7 +79,6 @@ Route::middleware(['allow.cors'])->group(function () {
         Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')->group(function () {
             Route::get('schedules', [ScheduleController::class, 'index']);
             Route::post('schedules', [ScheduleController::class, 'store']);
-            Route::get('schedules/{schedule}', [ScheduleController::class, 'show']);
             Route::put('schedules/{schedule}', [ScheduleController::class, 'update']);
             Route::patch('schedules/{schedule}/stations/{schedule_station}', [ScheduleController::class, 'updateStation']);
             Route::patch('schedules/{schedule}/stations/by-station/{station}', [ScheduleController::class, 'updateStationByStation']);
@@ -90,6 +89,8 @@ Route::middleware(['allow.cors'])->group(function () {
             Route::patch('stations/{station}', [StationController::class, 'update']);
             Route::delete('stations/{station}', [StationController::class, 'destroy']);
         });
+
+        Route::get('schedules/{schedule}', [ScheduleController::class, 'show']);
     });
 
     // Serve the static OpenAPI JSON, with the generated file as a fallback if needed
