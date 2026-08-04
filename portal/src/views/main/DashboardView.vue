@@ -60,6 +60,12 @@ type JourneySchedule = {
   }>
 }
 
+type JourneyStationTiming = {
+  stationName: string
+  arrivalTime?: string | null
+  departureTime?: string | null
+}
+
 const router = useRouter()
 const user = ref<AuthUser | null>(null)
 const message = ref('')
@@ -75,6 +81,66 @@ const stationError = ref('')
 const journeyLoading = ref(false)
 const journeyRoutes = ref<JourneyRoute[]>([])
 const journeySchedules = ref<JourneySchedule[]>([])
+
+function toDateTime(value: Date | string | null | undefined) {
+  if (!value) return null
+  if (value instanceof Date) return value
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function getSelectedDateTime() {
+  const date = toDateTime(journeyDate.value)
+  const time = toDateTime(journeyTime.value)
+  if (!date || !time) return null
+
+  const result = new Date(date)
+  result.setHours(time.getHours(), time.getMinutes(), time.getSeconds(), 0)
+  return result
+}
+
+function parseTimeToDate(base: Date, timeValue?: string | null) {
+  if (!timeValue) return null
+
+  const parts = timeValue.split(':').map((part) => Number(part))
+  if (parts.some((part) => Number.isNaN(part))) return null
+
+  const result = new Date(base)
+  result.setHours(parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0, 0)
+  return result
+}
+
+function getScheduleStation(schedule: JourneySchedule, stationId: number | null) {
+  if (!stationId) return null
+  return schedule.station_schedules?.find((stationSchedule) => stationSchedule.station_id === stationId) ?? null
+}
+
+function isMatchingSchedule(schedule: JourneySchedule) {
+  const selectedDateTime = getSelectedDateTime()
+  if (!selectedDateTime) return false
+
+  const startingStation = getScheduleStation(schedule, journeyFrom.value)
+  const departureTime = startingStation?.departure_time ?? schedule.departure_time
+  const scheduleDateTime = parseTimeToDate(selectedDateTime, departureTime)
+
+  return Boolean(scheduleDateTime && scheduleDateTime.getTime() >= selectedDateTime.getTime())
+}
+
+function getJourneyStationTimings(schedule: JourneySchedule): JourneyStationTiming[] {
+  return [journeyFrom.value, journeyTo.value]
+    .filter((stationId): stationId is number => Boolean(stationId))
+    .map((stationId) => {
+      const stationSchedule = getScheduleStation(schedule, stationId)
+      const stationName = stationSchedule?.station?.name ?? `Station ${stationId}`
+
+      return {
+        stationName,
+        arrivalTime: stationSchedule?.arrival_time ?? null,
+        departureTime: stationSchedule?.departure_time ?? null,
+      }
+    })
+}
 
 function getCoachRows(schedule: JourneySchedule) {
   return schedule.train?.coaches ?? []
@@ -174,7 +240,7 @@ function startJourney() {
       }
 
       journeyRoutes.value = data.routes ?? []
-      journeySchedules.value = data.schedules ?? []
+      journeySchedules.value = (data.schedules ?? []).filter((schedule: JourneySchedule) => isMatchingSchedule(schedule))
     })
     .catch((err) => {
       stationError.value = err instanceof Error ? err.message : 'Unable to load matching routes'
@@ -281,6 +347,10 @@ onMounted(() => {
                   </ul>
                 </section>
 
+                <Message v-if="!journeySchedules.length" severity="info" class="journey-empty-state">
+                  No matching schedules were found for the selected station, date, and time.
+                </Message>
+
                 <section v-if="journeySchedules.length" class="journey-results-block">
                   <h3>Matching schedules</h3>
                   <ul>
@@ -288,6 +358,11 @@ onMounted(() => {
                       <strong>{{ schedule.train?.train_name ?? 'Train' }}</strong>
                       <span v-if="schedule.train?.train_number"> ({{ schedule.train.train_number }})</span>
                       <span v-if="schedule.departure_time"> — departs {{ schedule.departure_time }}</span>
+                      <div v-for="stationTiming in getJourneyStationTimings(schedule)" :key="`${schedule.id}-${stationTiming.stationName}`" class="journey-station-summary">
+                        <span>{{ stationTiming.stationName }}</span>
+                        <span v-if="stationTiming.arrivalTime">Arrives {{ stationTiming.arrivalTime }}</span>
+                        <span v-if="stationTiming.departureTime">Leaves {{ stationTiming.departureTime }}</span>
+                      </div>
                       <div class="journey-train-summary">
                         <span>Total coaches: {{ getTotalCoaches(schedule) }}</span>
                         <span>Reservable coaches: {{ getReservableCoaches(schedule) }}</span>
@@ -390,6 +465,10 @@ onMounted(() => {
   gap: 1rem;
 }
 
+.journey-empty-state {
+  margin-top: 0.25rem;
+}
+
 .journey-results-block {
   padding: 1rem;
   border-radius: 14px;
@@ -411,6 +490,15 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 1.25rem;
+  margin-top: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.journey-station-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
   margin-top: 0.35rem;
   color: var(--text-secondary);
   font-size: 0.92rem;

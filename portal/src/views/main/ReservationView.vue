@@ -140,6 +140,10 @@ function getStationProgression() {
   return schedule.value?.route?.stations ?? []
 }
 
+function getStationTiming(stationId: number) {
+  return schedule.value?.station_schedules?.find((stationSchedule) => stationSchedule.station_id === stationId) ?? null
+}
+
 async function loadUser() {
   try {
     const response = await fetchCurrentUser()
@@ -225,9 +229,13 @@ onMounted(() => {
                 <section class="progression-panel" v-if="getStationProgression().length">
                   <h3>Route stations</h3>
                   <div class="station-strip">
-                    <span v-for="stationItem in getStationProgression()" :key="stationItem.id" class="station-pill">
-                      {{ stationItem.station?.name ?? `Station ${stationItem.sequence}` }}
-                    </span>
+                    <article v-for="stationItem in getStationProgression()" :key="stationItem.id" class="station-pill">
+                      <span>{{ stationItem.station?.name ?? `Station ${stationItem.sequence}` }}</span>
+                      <small v-if="getStationTiming(stationItem.station_id)?.arrival_time || getStationTiming(stationItem.station_id)?.departure_time" class="station-pill-times">
+                        <span v-if="getStationTiming(stationItem.station_id)?.arrival_time">Arrives {{ getStationTiming(stationItem.station_id)?.arrival_time }}</span>
+                        <span v-if="getStationTiming(stationItem.station_id)?.departure_time">Leaves {{ getStationTiming(stationItem.station_id)?.departure_time }}</span>
+                      </small>
+                    </article>
                   </div>
                 </section>
 
@@ -389,6 +397,19 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.station-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.station-pill-times {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  color: var(--text-secondary);
 }
 
 .station-pill {
