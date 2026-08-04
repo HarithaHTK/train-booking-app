@@ -50,7 +50,7 @@ class Schedule extends Model
     protected function casts(): array
     {
         return [
-            'departure_time' => 'datetime:H:i:s',
+            'departure_time' => 'string',
             'is_active' => 'boolean',
             'deleted_at' => 'datetime',
             'created_at' => 'datetime',
@@ -71,6 +71,11 @@ class Schedule extends Model
     public function stationSchedules(): HasMany
     {
         return $this->hasMany(ScheduleStation::class, 'schedule_id');
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class, 'schedule_id');
     }
 
     public function orderedStationSchedules(string $direction = 'asc'): HasMany

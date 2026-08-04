@@ -40,6 +40,15 @@
           Schedules
         </router-link>
 
+        <router-link
+          v-if="isAuthenticatedRoute"
+          :to="{ name: 'reservations' }"
+          class="navbar-link"
+          :class="{ active: route.name === 'reservations' }"
+        >
+          Reservations
+        </router-link>
+
         <div class="navbar-right">
           <ThemeToggle />
           <AccountMenu v-if="isAuthenticatedRoute" />

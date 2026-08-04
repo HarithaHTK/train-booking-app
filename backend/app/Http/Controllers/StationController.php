@@ -26,6 +26,7 @@ class StationController extends Controller
     public function index(): JsonResponse
     {
         $stations = Station::query()
+            ->where('is_active', true)
             ->latest()
             ->get();
 

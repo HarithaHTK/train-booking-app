@@ -74,4 +74,14 @@ class Station extends Model
     {
         return $this->hasMany(ScheduleStation::class, 'station_id');
     }
+
+    public function startReservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class, 'start_station_id');
+    }
+
+    public function leaveReservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class, 'leave_station_id');
+    }
 }

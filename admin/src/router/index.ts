@@ -5,6 +5,7 @@ import StationsView from '../views/main/StationsView.vue'
 import RoutesView from '../views/main/RoutesView.vue'
 import TrainsView from '../views/main/TrainsView.vue'
 import SchedulesView from '../views/main/SchedulesView.vue'
+import ReservationsView from '../views/main/ReservationsView.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -44,6 +45,12 @@ const routes: RouteRecordRaw[] = [
     path: '/schedules',
     name: 'schedules',
     component: SchedulesView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/reservations',
+    name: 'reservations',
+    component: ReservationsView,
     meta: { requiresAuth: true },
   },
 ]

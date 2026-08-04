@@ -5,6 +5,14 @@
         <router-link :to="{ name: 'home' }" class="navbar-title">Train Booking</router-link>
 
         <div class="navbar-right">
+          <div v-if="!showAuthActions" class="navbar-actions navbar-links">
+            <router-link :to="{ name: 'dashboard' }" class="nav-link-wrap">
+              <Button label="Dashboard" severity="secondary" text />
+            </router-link>
+            <router-link :to="{ name: 'my-reservations' }" class="nav-link-wrap">
+              <Button label="My Reservations" severity="secondary" text />
+            </router-link>
+          </div>
           <div v-if="showAuthActions" class="navbar-actions">
             <router-link :to="{ name: 'auth-login' }" class="nav-link-wrap">
               <Button label="Login" severity="secondary" text />
@@ -78,6 +86,10 @@ const showAuthActions = computed(() => route.meta.requiresAuth !== true)
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.navbar-links {
+  flex-wrap: wrap;
 }
 
 .nav-link-wrap {

@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Schedule\StoreScheduleRequest;
 use App\Http\Requests\Schedule\UpdateScheduleRequest;
 use App\Http\Requests\Schedule\UpdateScheduleStationRequest;
+use App\Models\RouteStation;
 use App\Models\Schedule;
 use App\Models\ScheduleStation;
+use App\Models\Station;
+use App\Models\TrainRoute;
+use App\Services\ReservationAvailabilityEngine;
 use Illuminate\Http\Request as BaseRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use OpenApi\Annotations as OA;
 
 class ScheduleController extends Controller
@@ -28,18 +33,119 @@ class ScheduleController extends Controller
      */
     public function index(): JsonResponse
     {
+        $travelDate = request()->input('travel_date');
+
         $schedules = Schedule::query()
             ->latest()
             ->with([
-                'train',
+                'train.coaches.seats',
                 'route.routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
                 'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
             ])
             ->get()
-            ->map(fn (Schedule $schedule) => $this->formatSchedule($schedule))
+            ->map(function (Schedule $schedule) use ($travelDate) {
+                $this->applySeatReservationAvailability(
+                    $schedule,
+                    $travelDate,
+                    request()->input('start_station_id'),
+                    request()->input('leave_station_id')
+                );
+
+                return $this->formatSchedule($schedule);
+            })
             ->values();
 
         return response()->json([
+            'schedules' => $schedules,
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/route-search/by-station/{station}",
+     *     tags={"Schedules"},
+     *     summary="Find routes and schedules by station direction",
+     *     operationId="searchRoutesByStation",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(name="station", in="path", required=true, description="Station ID", @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Matching routes and schedules retrieved successfully"),
+     *     @OA\Response(response=404, description="Station not found")
+     * )
+     */
+    public function searchRoutesByStation(Station $station): JsonResponse
+    {
+        $travelDate = request()->input('travel_date');
+
+        $routes = TrainRoute::query()
+            ->where('is_active', true)
+            ->with([
+                'routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
+                'schedules' => fn ($query) => $query->with([
+                    'train',
+                    'stationSchedules' => fn ($stationQuery) => $stationQuery->with('station')->orderBy('sequence', 'asc'),
+                ])->orderBy('created_at', 'desc'),
+            ])
+            ->get()
+            ->filter(function ($route) use ($station) {
+                $matchedIndex = $route->routeStations->search(fn (RouteStation $routeStation) => $routeStation->station_id === $station->id);
+
+                return $matchedIndex !== false && $matchedIndex < $route->routeStations->count() - 1;
+            })
+            ->map(function ($route) use ($station) {
+                $routeStations = $route->routeStations->values();
+                $matchedIndex = $routeStations->search(fn (RouteStation $routeStation) => $routeStation->station_id === $station->id);
+
+                return [
+                    'id' => $route->id,
+                    'name' => $route->name,
+                    'description' => $route->description,
+                    'is_active' => $route->is_active,
+                    'stations' => $routeStations->map(fn (RouteStation $routeStation) => [
+                        'id' => $routeStation->id,
+                        'route_id' => $routeStation->route_id,
+                        'station_id' => $routeStation->station_id,
+                        'sequence' => $routeStation->sequence,
+                        'station' => $routeStation->station?->toArray(),
+                    ])->values()->all(),
+                    'matched_station_id' => $station->id,
+                    'matched_sequence' => $routeStations[$matchedIndex]->sequence ?? null,
+                    'forward_stations' => $routeStations->slice($matchedIndex + 1)->map(fn (RouteStation $routeStation) => [
+                        'id' => $routeStation->id,
+                        'route_id' => $routeStation->route_id,
+                        'station_id' => $routeStation->station_id,
+                        'sequence' => $routeStation->sequence,
+                        'station' => $routeStation->station?->toArray(),
+                    ])->values()->all(),
+                ];
+            })
+            ->values();
+
+        $matchedRouteIds = $routes->pluck('id')->all();
+
+        $schedules = Schedule::query()
+            ->whereIn('route_id', $matchedRouteIds)
+            ->with([
+                'train.coaches.seats',
+                'route.routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
+                'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
+            ])
+            ->latest()
+            ->get()
+            ->map(function (Schedule $schedule) use ($travelDate) {
+                $this->applySeatReservationAvailability(
+                    $schedule,
+                    $travelDate,
+                    request()->input('start_station_id'),
+                    request()->input('leave_station_id')
+                );
+
+                return $this->formatSchedule($schedule);
+            })
+            ->values();
+
+        return response()->json([
+            'station' => $station,
+            'routes' => $routes,
             'schedules' => $schedules,
         ]);
     }
@@ -79,7 +185,7 @@ class ScheduleController extends Controller
         ]);
 
         $schedule->load([
-            'train',
+            'train.coaches.seats',
             'route.routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
             'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
         ]);
@@ -107,10 +213,17 @@ class ScheduleController extends Controller
     public function show(Request $request, Schedule $schedule): JsonResponse
     {
         $schedule->load([
-            'train',
+            'train.coaches.seats',
             'route.routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
             'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
         ]);
+
+        $this->applySeatReservationAvailability(
+            $schedule,
+            $request->input('travel_date'),
+            $request->input('start_station_id'),
+            $request->input('leave_station_id')
+        );
 
         return response()->json([
             'schedule' => $this->formatSchedule($schedule),
@@ -266,11 +379,15 @@ class ScheduleController extends Controller
 
     private function formatSchedule(Schedule $schedule): array
     {
+        $departureTime = $schedule->departure_time instanceof Carbon
+            ? $schedule->departure_time->format('H:i:s')
+            : $schedule->departure_time;
+
         return [
             'id' => $schedule->id,
             'train_id' => $schedule->train_id,
             'route_id' => $schedule->route_id,
-            'departure_time' => $schedule->departure_time,
+            'departure_time' => $departureTime,
             'is_active' => $schedule->is_active,
             'train' => $schedule->train?->toArray(),
             'route' => $schedule->route ? [
@@ -295,13 +412,21 @@ class ScheduleController extends Controller
 
     private function formatScheduleStation(ScheduleStation $scheduleStation): array
     {
+        $arrivalTime = $scheduleStation->arrival_time instanceof Carbon
+            ? $scheduleStation->arrival_time->format('H:i:s')
+            : $scheduleStation->arrival_time;
+
+        $departureTime = $scheduleStation->departure_time instanceof Carbon
+            ? $scheduleStation->departure_time->format('H:i:s')
+            : $scheduleStation->departure_time;
+
         return [
             'id' => $scheduleStation->id,
             'schedule_id' => $scheduleStation->schedule_id,
             'station_id' => $scheduleStation->station_id,
             'sequence' => $scheduleStation->sequence,
-            'arrival_time' => $scheduleStation->arrival_time,
-            'departure_time' => $scheduleStation->departure_time,
+            'arrival_time' => $arrivalTime,
+            'departure_time' => $departureTime,
             'station' => $scheduleStation->station?->toArray(),
             'created_by' => $scheduleStation->created_by,
             'updated_by' => $scheduleStation->updated_by,
@@ -310,5 +435,25 @@ class ScheduleController extends Controller
             'created_at' => $scheduleStation->created_at,
             'updated_at' => $scheduleStation->updated_at,
         ];
+    }
+
+    private function applySeatReservationAvailability(Schedule $schedule, mixed $travelDate, mixed $startStationId = null, mixed $leaveStationId = null): void
+    {
+        $availabilityEngine = app(ReservationAvailabilityEngine::class);
+
+        foreach ($schedule->train?->coaches ?? [] as $coach) {
+            foreach ($coach->seats ?? [] as $seat) {
+                $isReserved = $availabilityEngine->isReserved(
+                    (int) $schedule->id,
+                    (int) $seat->id,
+                    $travelDate,
+                    $startStationId !== null ? (int) $startStationId : null,
+                    $leaveStationId !== null ? (int) $leaveStationId : null,
+                );
+
+                $seat->setAttribute('isReserved', $isReserved);
+                $seat->setAttribute('is_reserved', $isReserved);
+            }
+        }
     }
 }

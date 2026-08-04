@@ -37,8 +37,8 @@ class UpdateScheduleStationRequest extends FormRequest
                     ->where(fn ($query) => $query->where('schedule_id', $scheduleId))
                     ->ignore($scheduleStation?->id),
             ],
-            'arrival_time' => ['sometimes', 'nullable', 'date_format:H:i:s'],
-            'departure_time' => ['sometimes', 'nullable', 'date_format:H:i:s'],
+            'arrival_time' => ['sometimes', 'nullable', 'regex:/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/'],
+            'departure_time' => ['sometimes', 'nullable', 'regex:/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/'],
         ];
     }
 }
