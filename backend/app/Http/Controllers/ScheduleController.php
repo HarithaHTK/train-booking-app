@@ -34,7 +34,7 @@ class ScheduleController extends Controller
         $schedules = Schedule::query()
             ->latest()
             ->with([
-                'train',
+                'train.coaches.seats',
                 'route.routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
                 'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
             ])
@@ -110,7 +110,7 @@ class ScheduleController extends Controller
         $schedules = Schedule::query()
             ->whereIn('route_id', $matchedRouteIds)
             ->with([
-                'train.coaches',
+                'train.coaches.seats',
                 'route.routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
                 'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
             ])
@@ -161,7 +161,7 @@ class ScheduleController extends Controller
         ]);
 
         $schedule->load([
-            'train',
+            'train.coaches.seats',
             'route.routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
             'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
         ]);
@@ -189,7 +189,7 @@ class ScheduleController extends Controller
     public function show(Request $request, Schedule $schedule): JsonResponse
     {
         $schedule->load([
-            'train.coaches',
+            'train.coaches.seats',
             'route.routeStations' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
             'stationSchedules' => fn ($query) => $query->with('station')->orderBy('sequence', 'asc'),
         ]);

@@ -6,6 +6,12 @@ export type ScheduleCoach = {
   type?: string | null
   seat_count?: number | null
   total_seats?: number | null
+  seats?: Array<{
+    id: number
+    seat_number?: number | string | null
+    seat_class?: string | null
+    is_reserved?: boolean | null
+  }>
 }
 
 export type ScheduleTrain = {
