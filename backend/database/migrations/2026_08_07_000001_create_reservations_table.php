@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('start_station_id')->constrained('stations')->restrictOnDelete();
             $table->foreignId('leave_station_id')->constrained('stations')->restrictOnDelete();
             $table->foreignId('seat_id')->constrained('seats')->restrictOnDelete();
+            $table->date('travel_date')->nullable()->index();
             $table->string('status')->default('pending');
             $table->timestamp('checked_in_at')->nullable();
             $table->timestamp('checked_out_at')->nullable();

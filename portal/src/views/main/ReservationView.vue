@@ -249,6 +249,7 @@ async function confirmBooking() {
       start_station_id: journeyStartStation.value ?? 0,
       leave_station_id: journeyEndStation.value ?? 0,
       seat_ids: selectedSeats.map((seat) => seat.seatId),
+      travel_date: formatDateQuery(journeyDate.value) ?? null,
       status: 'confirmed',
     })
 

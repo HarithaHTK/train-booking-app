@@ -20,6 +20,7 @@ use OpenApi\Annotations as OA;
  *     @OA\Property(property="start_station_id", type="integer", example=2),
  *     @OA\Property(property="leave_station_id", type="integer", example=5),
  *     @OA\Property(property="seat_id", type="integer", example=10),
+ *     @OA\Property(property="travel_date", type="string", format="date", nullable=true, example="2026-08-04"),
  *     @OA\Property(property="status", type="string", example="pending"),
  *     @OA\Property(property="checked_in_at", type="string", format="date-time", nullable=true, example=null),
  *     @OA\Property(property="checked_out_at", type="string", format="date-time", nullable=true, example=null),
@@ -37,6 +38,7 @@ use OpenApi\Annotations as OA;
     'start_station_id',
     'leave_station_id',
     'seat_id',
+    'travel_date',
     'status',
     'checked_in_at',
     'checked_out_at',
@@ -51,6 +53,7 @@ class Reservation extends Model
     protected function casts(): array
     {
         return [
+            'travel_date' => 'date',
             'checked_in_at' => 'datetime',
             'checked_out_at' => 'datetime',
             'deleted_at' => 'datetime',

@@ -43,6 +43,7 @@ export type Reservation = {
   start_station_id: number
   leave_station_id: number
   seat_id: number
+  travel_date?: string | null
   status: ReservationStatus
   checked_in_at?: string | null
   checked_out_at?: string | null
@@ -61,6 +62,7 @@ export type ReservationPayload = {
   start_station_id: number
   leave_station_id: number
   seat_id: number
+  travel_date?: string | null
   status: ReservationStatus
   checked_in_at?: string | null
   checked_out_at?: string | null

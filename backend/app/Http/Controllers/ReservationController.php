@@ -95,6 +95,7 @@ class ReservationController extends Controller
                     'start_station_id' => $validated['start_station_id'],
                     'leave_station_id' => $validated['leave_station_id'],
                     'seat_id' => $seatId,
+                    'travel_date' => $validated['travel_date'] ?? null,
                     'status' => $validated['status'] ?? 'pending',
                     'checked_in_at' => $validated['checked_in_at'] ?? null,
                     'checked_out_at' => $validated['checked_out_at'] ?? null,

@@ -83,6 +83,7 @@ class StoreReservationRequest extends FormRequest
                     }
                 },
             ],
+            'travel_date' => ['sometimes', 'nullable', 'date'],
             'status' => ['sometimes', 'string', Rule::in(['pending', 'confirmed', 'cancelled', 'completed'])],
             'checked_in_at' => ['sometimes', 'nullable', 'date'],
             'checked_out_at' => ['sometimes', 'nullable', 'date'],

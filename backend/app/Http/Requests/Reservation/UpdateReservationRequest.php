@@ -58,6 +58,7 @@ class UpdateReservationRequest extends FormRequest
                 },
             ],
             'seat_id' => ['sometimes', 'required', 'integer', 'exists:seats,id'],
+            'travel_date' => ['sometimes', 'nullable', 'date'],
             'status' => ['sometimes', 'string', Rule::in(['pending', 'confirmed', 'cancelled', 'completed'])],
             'checked_in_at' => ['sometimes', 'nullable', 'date'],
             'checked_out_at' => ['sometimes', 'nullable', 'date'],

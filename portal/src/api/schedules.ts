@@ -69,6 +69,7 @@ export type ReservationPayload = {
   leave_station_id: number
   seat_id?: number
   seat_ids?: number[]
+  travel_date?: string | null
   status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
 }
 

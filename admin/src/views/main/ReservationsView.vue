@@ -33,7 +33,9 @@ const stationLookup = ref<Map<number, Station>>(new Map())
 const coachLookup = ref<Map<number, Coach>>(new Map())
 const showDeleted = ref(false)
 const editDialogVisible = ref(false)
+const detailDialogVisible = ref(false)
 const editingReservationId = ref<number | null>(null)
+const selectedReservation = ref<Reservation | null>(null)
 const reservationForm = ref({
   schedule_id: '',
   start_station_id: '',
@@ -56,6 +58,11 @@ const visibleReservations = computed(() => reservations.value)
 
 function formatText(value?: string | number | null) {
   return value === null || value === undefined || value === '' ? '-' : String(value)
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '-'
+  return value.replace('T', ' ').replace('.000000Z', '').replace('Z', '')
 }
 
 function formatUser(reservation: Reservation) {
@@ -152,9 +159,24 @@ async function openEditDialog(reservation: Reservation) {
   }
 }
 
+async function openDetailDialog(reservation: Reservation) {
+  try {
+    const res = await fetchReservation(reservation.id)
+    selectedReservation.value = res.reservation
+    detailDialogVisible.value = true
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Unable to load reservation details'
+  }
+}
+
 function closeDialog() {
   editDialogVisible.value = false
   resetForm()
+}
+
+function closeDetailDialog() {
+  detailDialogVisible.value = false
+  selectedReservation.value = null
 }
 
 async function saveReservation() {
@@ -291,6 +313,7 @@ onMounted(() => {
                   <Column header="Actions">
                     <template #body="slotProps">
                       <div class="table-actions">
+                        <Button icon="pi pi-eye" aria-label="View reservation details" size="small" severity="secondary" text rounded @click="openDetailDialog(slotProps.data)" />
                         <Button icon="pi pi-pencil" aria-label="Edit reservation" size="small" severity="secondary" text rounded @click="openEditDialog(slotProps.data)" />
                         <Button icon="pi pi-trash" aria-label="Delete reservation" size="small" severity="danger" text rounded :loading="rowActionLoadingId === slotProps.data.id" @click="removeReservation(slotProps.data)" />
                       </div>
@@ -304,7 +327,7 @@ onMounted(() => {
       </template>
     </Card>
 
-    <Dialog v-model:visible="editDialogVisible" modal header="Edit Reservation" :style="{ width: '42rem' }" @hide="closeDialog">
+    <Dialog v-model:visible="editDialogVisible" modal header="Edit Reservation" :style="{ width: '58rem', maxWidth: '96vw' }" :breakpoints="{ '960px': '92vw', '640px': '96vw' }" @hide="closeDialog">
       <div class="dialog-form">
         <Message v-if="validationError" severity="error">{{ validationError }}</Message>
 
@@ -345,5 +368,108 @@ onMounted(() => {
         </div>
       </div>
     </Dialog>
+
+    <Dialog v-model:visible="detailDialogVisible" modal header="Reservation Details" :style="{ width: '68rem', maxWidth: '96vw' }" :breakpoints="{ '1200px': '92vw', '768px': '96vw' }" @hide="closeDetailDialog">
+      <div class="dialog-form" v-if="selectedReservation">
+        <div class="form-grid">
+          <label>
+            Reservation ID
+            <InputText :modelValue="String(selectedReservation.id)" readonly />
+          </label>
+          <label>
+            User
+            <InputText :modelValue="formatUser(selectedReservation)" readonly />
+          </label>
+          <label>
+            Train
+            <InputText :modelValue="formatTrain(selectedReservation)" readonly />
+          </label>
+          <label>
+            Stations
+            <InputText :modelValue="formatStations(selectedReservation)" readonly />
+          </label>
+          <label>
+            Seat
+            <InputText :modelValue="formatSeat(selectedReservation)" readonly />
+          </label>
+          <label>
+            Travel Date
+            <InputText :modelValue="formatText(selectedReservation.travel_date)" readonly />
+          </label>
+          <label>
+            Status
+            <InputText :modelValue="selectedReservation.status" readonly />
+          </label>
+          <label>
+            Checked In At
+            <InputText :modelValue="formatDateTime(selectedReservation.checked_in_at)" readonly />
+          </label>
+          <label>
+            Checked Out At
+            <InputText :modelValue="formatDateTime(selectedReservation.checked_out_at)" readonly />
+          </label>
+          <label>
+            Deleted At
+            <InputText :modelValue="formatDateTime(selectedReservation.deleted_at)" readonly />
+          </label>
+        </div>
+
+        <div class="dialog-actions">
+          <Button label="Close" severity="secondary" outlined @click="closeDetailDialog" />
+        </div>
+      </div>
+    </Dialog>
   </main>
 </template>
+
+<style scoped>
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+}
+
+.form-grid > label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-grid :deep(.p-inputtext),
+.form-grid :deep(.p-dropdown) {
+  width: 100%;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.dialog-actions :deep(.p-button) {
+  min-width: 120px;
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dialog-actions {
+    flex-direction: column;
+  }
+
+  .dialog-actions :deep(.p-button) {
+    width: 100%;
+  }
+}
+</style>
