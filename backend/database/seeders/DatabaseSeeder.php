@@ -75,6 +75,9 @@ class DatabaseSeeder extends Seeder
 
         // Seed demo trains for the admin table view
         $this->call(TrainSeeder::class);
+
+        // Seed demo schedules for the schedule management flow
+        $this->call(ScheduleSeeder::class);
     }
 
     private function attachRole(int $userId, string $roleName, string $roleTable, string $modelHasRolesTable, string $guardName): void

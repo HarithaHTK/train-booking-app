@@ -15,6 +15,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CoachController;
 use App\Http\Controllers\EngineController;
+use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\RouteStationController;
 use App\Http\Controllers\StationController;
 use App\Http\Controllers\SeatController;
@@ -67,6 +68,15 @@ Route::middleware(['allow.cors'])->group(function () {
 
         Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
             ->apiResource('route-stations', RouteStationController::class);
+
+        Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')->group(function () {
+            Route::get('schedules', [ScheduleController::class, 'index']);
+            Route::post('schedules', [ScheduleController::class, 'store']);
+            Route::get('schedules/{schedule}', [ScheduleController::class, 'show']);
+            Route::put('schedules/{schedule}', [ScheduleController::class, 'update']);
+            Route::patch('schedules/{schedule}/stations/{schedule_station}', [ScheduleController::class, 'updateStation']);
+            Route::patch('schedules/{schedule}/stations/by-station/{station}', [ScheduleController::class, 'updateStationByStation']);
+        });
 
         Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
             ->apiResource('stations', StationController::class);

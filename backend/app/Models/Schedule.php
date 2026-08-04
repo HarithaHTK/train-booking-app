@@ -12,12 +12,13 @@ use OpenApi\Annotations as OA;
 
 /**
  * @OA\Schema(
- *     schema="TrainRoute",
+ *     schema="Schedule",
  *     type="object",
- *     required={"id", "name", "is_active"},
+ *     required={"id", "train_id", "route_id", "is_active"},
  *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="name", type="string", example="Main Line"),
- *     @OA\Property(property="description", type="string", nullable=true, example="Primary railway route line"),
+ *     @OA\Property(property="train_id", type="integer", example=1),
+ *     @OA\Property(property="route_id", type="integer", example=1),
+ *     @OA\Property(property="departure_time", type="string", format="time", nullable=true, example="20:00:00"),
  *     @OA\Property(property="is_active", type="boolean", example=true),
  *     @OA\Property(property="created_by", type="integer", nullable=true, example=1),
  *     @OA\Property(property="updated_by", type="integer", nullable=true, example=1),
@@ -26,40 +27,55 @@ use OpenApi\Annotations as OA;
  *     @OA\Property(property="created_at", type="string", format="date-time", nullable=true),
  *     @OA\Property(property="updated_at", type="string", format="date-time", nullable=true),
  *     @OA\Property(
- *         property="stations",
+ *         property="station_schedules",
  *         type="array",
- *         @OA\Items(ref="#/components/schemas/RouteStation")
+ *         @OA\Items(ref="#/components/schemas/ScheduleStation")
  *     )
  * )
  */
 #[Fillable([
-    'name',
-    'description',
+    'train_id',
+    'route_id',
+    'departure_time',
     'is_active',
     'created_by',
     'updated_by',
     'deleted_by',
 ])]
-class TrainRoute extends Model
+class Schedule extends Model
 {
-    /** @use HasFactory<\Database\Factories\TrainRouteFactory> */
+    /** @use HasFactory<\Database\Factories\ScheduleFactory> */
     use HasFactory, SoftDeletes;
 
-    protected $table = 'routes';
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
+            'departure_time' => 'datetime:H:i:s',
             'is_active' => 'boolean',
             'deleted_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    public function train(): BelongsTo
+    {
+        return $this->belongsTo(Train::class, 'train_id');
+    }
+
+    public function route(): BelongsTo
+    {
+        return $this->belongsTo(TrainRoute::class, 'route_id');
+    }
+
+    public function stationSchedules(): HasMany
+    {
+        return $this->hasMany(ScheduleStation::class, 'schedule_id');
+    }
+
+    public function orderedStationSchedules(string $direction = 'asc'): HasMany
+    {
+        return $this->stationSchedules()->orderBy('sequence', $direction);
     }
 
     public function createdBy(): BelongsTo
@@ -75,25 +91,5 @@ class TrainRoute extends Model
     public function deletedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deleted_by');
-    }
-
-    public function routeStations(): HasMany
-    {
-        return $this->hasMany(RouteStation::class, 'route_id');
-    }
-
-    public function orderedRouteStations(string $direction = 'asc'): HasMany
-    {
-        return $this->routeStations()->orderBy('sequence', $direction);
-    }
-
-    public function trains(): HasMany
-    {
-        return $this->hasMany(Train::class, 'route_id');
-    }
-
-    public function schedules(): HasMany
-    {
-        return $this->hasMany(Schedule::class, 'route_id');
     }
 }

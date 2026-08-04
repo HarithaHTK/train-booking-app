@@ -63,6 +63,11 @@ class Train extends Model
         return $this->belongsTo(TrainRoute::class, 'route_id');
     }
 
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(Schedule::class, 'train_id');
+    }
+
     public function engines(): BelongsToMany
     {
         return $this->belongsToMany(Engine::class, 'train_engines')
