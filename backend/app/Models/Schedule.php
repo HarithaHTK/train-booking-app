@@ -73,6 +73,11 @@ class Schedule extends Model
         return $this->hasMany(ScheduleStation::class, 'schedule_id');
     }
 
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class, 'schedule_id');
+    }
+
     public function orderedStationSchedules(string $direction = 'asc'): HasMany
     {
         return $this->stationSchedules()->orderBy('sequence', $direction);

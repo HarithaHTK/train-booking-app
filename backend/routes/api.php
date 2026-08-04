@@ -19,6 +19,7 @@ use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\RouteStationController;
 use App\Http\Controllers\StationController;
 use App\Http\Controllers\SeatController;
+use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\TrainCoachController;
 use App\Http\Controllers\TrainController;
 use App\Http\Controllers\TrainEngineController;
@@ -72,6 +73,8 @@ Route::middleware(['allow.cors'])->group(function () {
 
         Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')
             ->apiResource('route-stations', RouteStationController::class);
+
+        Route::apiResource('reservations', ReservationController::class);
 
         Route::middleware(\App\Http\Middleware\RequireRole::class . ':admin')->group(function () {
             Route::get('schedules', [ScheduleController::class, 'index']);
